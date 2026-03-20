@@ -148,7 +148,6 @@ const Reply = sequelize.define(
     body: {
       type: DataTypes.TEXT("long"),
       allowNull: false,
-      defaultValue: "",
     },
   },
   {
