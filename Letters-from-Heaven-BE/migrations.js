@@ -50,9 +50,18 @@ const MIGRATIONS = [
         "replies",
         "letterId"
       );
-      for (const indexName of uniqueIndexes) {
-        await dropForeignKeyIfExists(sequelize, "replies", indexName);
-        await sequelize.query(`ALTER TABLE replies DROP INDEX \`${indexName}\``);
+      if (uniqueIndexes.length > 0) {
+        const fkNames = await getForeignKeysForColumn(sequelize, "replies", "letterId");
+        for (const fkName of fkNames) {
+          try {
+            await sequelize.query(`ALTER TABLE replies DROP FOREIGN KEY \`${fkName}\``);
+          } catch (_) {
+            // ignore if already dropped
+          }
+        }
+        for (const indexName of uniqueIndexes) {
+          await sequelize.query(`ALTER TABLE replies DROP INDEX \`${indexName}\``);
+        }
       }
 
       await addColumnIfMissing(
@@ -143,26 +152,6 @@ async function getForeignKeysForColumn(sequelize, table, column) {
   );
 
   return rows.map((row) => row.CONSTRAINT_NAME);
-}
-
-async function dropForeignKeyIfExists(sequelize, table, indexName) {
-  const [rows] = await sequelize.query(
-    `SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.STATISTICS
-     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?
-     AND NON_UNIQUE = 0`,
-    { replacements: [table, indexName] }
-  );
-
-  for (const row of rows) {
-    try {
-      await sequelize.query(`ALTER TABLE ${table} DROP FOREIGN KEY \`${row.CONSTRAINT_NAME}\``);
-    } catch (error) {
-      // Ignore if constraint doesn't exist
-      if (error.code !== 'ER_CANT_DROP_FIELD_OR_KEY') {
-        throw error;
-      }
-    }
-  }
 }
 
 async function indexExists(sequelize, table, indexName) {
