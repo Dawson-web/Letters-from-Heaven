@@ -4,17 +4,31 @@ import { observer } from 'mobx-react-lite';
 
 import { ArcoCard } from '@/components/arco/card';
 import { ArcoEmpty } from '@/components/arco/empty';
+import { AuthRequiredState } from '@/components/auth/auth-required-state';
 import { LoadingState } from '@/components/arco/loading-state';
 import { PageShell } from '@/components/layout/page-shell';
 import { useRootStore } from '@/stores/root-store';
 import { formatDateTime, formatRemaining } from '@/utils/time';
 
 const InboxPage = observer(() => {
-  const { mailboxStore } = useRootStore();
+  const { mailboxStore, userStore } = useRootStore();
 
   useDidShow(() => {
-    void mailboxStore.refreshReplies();
+    if (userStore.isAuthorized) {
+      void mailboxStore.refreshReplies();
+    }
   });
+
+  if (!userStore.isAuthorized) {
+    return (
+      <PageShell
+        title='收件箱'
+        subtitle='完成微信授权后，回响才会投递到你的专属信箱。'
+      >
+        <AuthRequiredState description='请先回到首页，通过底部微信授权弹层进入后再查看收件箱。' />
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell

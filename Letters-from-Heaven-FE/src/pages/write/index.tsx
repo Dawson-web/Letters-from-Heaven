@@ -9,6 +9,7 @@ import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
 import { ArcoEmpty } from '@/components/arco/empty';
 import { ArcoTag } from '@/components/arco/tag';
+import { AuthRequiredState } from '@/components/auth/auth-required-state';
 import { LetterPaper } from '@/components/arco/letter-paper';
 import { RELATION_OPTIONS } from '@/constants/relations';
 import { PageShell } from '@/components/layout/page-shell';
@@ -16,7 +17,7 @@ import { getErrorMessage } from '@/services/request';
 import { useRootStore } from '@/stores/root-store';
 
 const WritePage = observer(() => {
-  const { mailboxStore } = useRootStore();
+  const { mailboxStore, userStore } = useRootStore();
   const [title, setTitle] = useState(mailboxStore.draft.title);
   const [body, setBody] = useState(mailboxStore.draft.body);
   const [relation, setRelation] = useState(mailboxStore.draft.relation);
@@ -36,6 +37,17 @@ const WritePage = observer(() => {
   const canSend = useMemo(() => {
     return mailboxStore.boundaryAccepted && body.trim().length >= 8 && Boolean(relation);
   }, [body, mailboxStore.boundaryAccepted, relation]);
+
+  if (!userStore.isAuthorized) {
+    return (
+      <PageShell
+        title='写信'
+        subtitle='开始写信前需要先完成微信授权。'
+      >
+        <AuthRequiredState description='请先回到首页，通过底部微信授权弹层进入后再开始写第一封信。' />
+      </PageShell>
+    );
+  }
 
   if (!mailboxStore.boundaryAccepted) {
     return (

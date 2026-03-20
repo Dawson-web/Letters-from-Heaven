@@ -67,6 +67,239 @@ button::after {
   border: 0;
 }
 
+.wechat-profile-avatar {
+  border-radius: 9999rpx;
+  overflow: hidden;
+  background: #ebe7e0;
+  border: 1px solid var(--linen-edge);
+}
+
+.wechat-profile-avatar {
+  width: 112rpx;
+  height: 112rpx;
+}
+
+.wechat-auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: flex-end;
+}
+
+.wechat-auth-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(61, 58, 54, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+.wechat-auth-sheet {
+  position: relative;
+  width: 100%;
+  padding: 24rpx 36rpx calc(40rpx + env(safe-area-inset-bottom));
+  border-radius: 32rpx 32rpx 0 0;
+  background: #fff;
+  box-shadow: 0 -18px 44px rgba(0, 0, 0, 0.12);
+}
+
+.wechat-auth-sheet-handle {
+  width: 72rpx;
+  height: 8rpx;
+  margin: 0 auto 20rpx;
+  border-radius: 9999rpx;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.wechat-auth-header {
+  text-align: center;
+}
+
+.wechat-auth-title {
+  display: block;
+  color: #191919;
+  font-size: 36rpx;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.wechat-auth-subtitle {
+  display: block;
+  margin-top: 12rpx;
+  color: #7d7d7d;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.wechat-auth-avatar-block {
+  margin-top: 36rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.wechat-auth-avatar-picker {
+  position: relative;
+}
+
+.wechat-auth-preview-avatar {
+  width: 132rpx;
+  height: 132rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999rpx;
+  background: linear-gradient(135deg, #68c26a 0%, #54b85a 100%);
+  overflow: hidden;
+}
+
+.wechat-auth-avatar-hit {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  border-radius: 9999rpx;
+}
+
+.wechat-auth-preview-avatar-label {
+  font-size: 54rpx;
+  font-weight: 700;
+  color: #fff;
+}
+
+.wechat-auth-avatar-tip {
+  margin-top: 16rpx;
+  color: #7d7d7d;
+  font-size: 24rpx;
+}
+
+.wechat-auth-field {
+  margin-top: 36rpx;
+}
+
+.wechat-auth-field-label {
+  display: block;
+  margin-bottom: 16rpx;
+  color: #191919;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.wechat-auth-nickname-row {
+  padding: 22rpx 0;
+  border-bottom: 1px solid #ebebeb;
+}
+
+.wechat-auth-scope {
+  margin-top: 28rpx;
+  padding: 24rpx 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #ebebeb;
+}
+
+.wechat-auth-scope-label {
+  color: #191919;
+  font-size: 28rpx;
+}
+
+.wechat-auth-scope-status {
+  color: #7d7d7d;
+  font-size: 24rpx;
+}
+
+.wechat-auth-privacy {
+  display: block;
+  margin-top: 20rpx;
+  color: #7d7d7d;
+  font-size: 22rpx;
+  line-height: 1.6;
+}
+
+.wechat-auth-cancel-button {
+  background: #f5f5f5;
+  border-color: #e7e7e7;
+  color: #191919;
+}
+
+.wechat-auth-confirm-button {
+  background: #07c160;
+  color: #fff;
+}
+
+.boundary-confirm-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 1190;
+  display: flex;
+  align-items: flex-end;
+}
+
+.boundary-confirm-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(6px);
+}
+
+.boundary-confirm-sheet {
+  position: relative;
+  width: 100%;
+  padding: 24rpx 36rpx calc(40rpx + env(safe-area-inset-bottom));
+  border-radius: 32rpx 32rpx 0 0;
+  background: #fffdf9;
+  box-shadow: 0 -18px 44px rgba(0, 0, 0, 0.14);
+}
+
+.boundary-confirm-handle {
+  width: 72rpx;
+  height: 8rpx;
+  margin: 0 auto 24rpx;
+  border-radius: 9999rpx;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.boundary-confirm-title {
+  display: block;
+  color: #191919;
+  font-size: 36rpx;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.boundary-confirm-copy {
+  display: block;
+  margin-top: 20rpx;
+  color: #4a4a4a;
+  font-size: 28rpx;
+  line-height: 1.75;
+}
+
+.boundary-confirm-note {
+  display: block;
+  margin-top: 20rpx;
+  color: #8b7e6a;
+  font-size: 24rpx;
+  line-height: 1.7;
+}
+
+.boundary-confirm-button {
+  background: #8b7e6a;
+  color: #fff;
+}
+
+.wechat-auth-input {
+  width: 100%;
+  color: #191919;
+  font-size: 30rpx;
+  line-height: 1.4;
+}
+
+.wechat-auth-input-placeholder {
+  color: #b6b6b6;
+}
+
 .line-clamp-2 {
   display: -webkit-box;
   overflow: hidden;

@@ -5,16 +5,36 @@ import { observer } from 'mobx-react-lite';
 import { AnimatedView } from '@/components/animation/animated-view';
 import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
-import { ArcoNotice } from '@/components/arco/notice';
+import { BoundaryConfirmSheet } from '@/components/auth/boundary-confirm-sheet';
+import { WechatAuthSheet } from '@/components/auth/wechat-auth-sheet';
 import { PageShell } from '@/components/layout/page-shell';
+import { getErrorMessage } from '@/services/request';
 import { useRootStore } from '@/stores/root-store';
+import type { WechatAuthorizationDraft } from '@/types/user';
 
 const HomePage = observer(() => {
-  const { mailboxStore } = useRootStore();
+  const { mailboxStore, userStore } = useRootStore();
 
   useDidShow(() => {
-    void mailboxStore.refreshReplies();
+    if (userStore.isAuthorized) {
+      void mailboxStore.refreshReplies();
+    }
   });
+
+  const handleAuthorize = async (payload: WechatAuthorizationDraft) => {
+    try {
+      await userStore.authorizeProfile(payload);
+      Taro.showToast({
+        title: '授权成功',
+        icon: 'none',
+      });
+    } catch (error) {
+      Taro.showToast({
+        title: getErrorMessage(error),
+        icon: 'none',
+      });
+    }
+  };
 
   return (
     <PageShell
@@ -26,6 +46,11 @@ const HomePage = observer(() => {
         <AnimatedView animation='fade-in-up' delay={2}>
           <View className='flex items-start justify-between'>
             <View className='flex-1'>
+              {userStore.isAuthorized ? (
+                <Text className='text-overline text-fog'>
+                  欢迎你，{userStore.profile?.displayName}
+                </Text>
+              ) : null}
               <Text className='text-body text-driftwood leading-7'>
                 这里不是即时聊天，也不是逝者拟真工具。
               </Text>
@@ -94,22 +119,6 @@ const HomePage = observer(() => {
         </AnimatedView>
       </ArcoCard>
 
-      {/* 边界确认 */}
-      {!mailboxStore.boundaryAccepted ? (
-        <ArcoCard delay={2}>
-          <ArcoNotice
-            tone='warning'
-            title='使用前请先确认边界'
-            description='回信由 AI 生成，用来承接情绪与记忆，不代表逝者真实意志。体验版回响会在约 90 秒后送达，正式版可切换到纪念日节奏。'
-          />
-          <View className='mt-5'>
-            <ArcoButton onClick={mailboxStore.acceptBoundary}>
-              我已知晓，开始体验
-            </ArcoButton>
-          </View>
-        </ArcoCard>
-      ) : null}
-
       {/* 信箱状态 */}
       <ArcoCard delay={3}>
         <AnimatedView animation='fade-in-up'>
@@ -142,6 +151,21 @@ const HomePage = observer(() => {
           </AnimatedView>
         </View>
       </ArcoCard>
+
+      {!userStore.isAuthorized ? (
+        <WechatAuthSheet
+          loading={userStore.authorizing}
+          onAuthorize={handleAuthorize}
+          onReject={() => {
+            Taro.showToast({
+              title: '未授权暂时无法使用业务功能',
+              icon: 'none',
+            });
+          }}
+        />
+      ) : !mailboxStore.boundaryAccepted ? (
+        <BoundaryConfirmSheet onConfirm={mailboxStore.acceptBoundary} />
+      ) : null}
     </PageShell>
   );
 });

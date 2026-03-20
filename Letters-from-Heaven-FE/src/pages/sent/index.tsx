@@ -6,6 +6,7 @@ import { AnimatedView } from '@/components/animation/animated-view';
 import { LottiePlayer } from '@/components/animation/lottie-player';
 import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
+import { AuthRequiredState } from '@/components/auth/auth-required-state';
 import { LoadingState } from '@/components/arco/loading-state';
 import { PageShell } from '@/components/layout/page-shell';
 import { useRootStore } from '@/stores/root-store';
@@ -13,12 +14,25 @@ import { formatRemaining } from '@/utils/time';
 
 const SentPage = observer(() => {
   const { params } = useRouter();
-  const { mailboxStore } = useRootStore();
+  const { mailboxStore, userStore } = useRootStore();
   const reply = mailboxStore.getReply(params.id);
 
   useDidShow(() => {
-    void mailboxStore.refreshReplyDetail(params.id);
+    if (userStore.isAuthorized) {
+      void mailboxStore.refreshReplyDetail(params.id);
+    }
   });
+
+  if (!userStore.isAuthorized) {
+    return (
+      <PageShell
+        title='信件已投递'
+        subtitle='完成微信授权后，才能继续查看投递状态。'
+      >
+        <AuthRequiredState description='请先回到首页，通过底部微信授权弹层进入后再查看投递状态。' />
+      </PageShell>
+    );
+  }
 
   if (mailboxStore.detailSyncing && !reply) {
     return (

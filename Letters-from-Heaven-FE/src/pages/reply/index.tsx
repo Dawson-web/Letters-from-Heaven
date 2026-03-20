@@ -8,6 +8,7 @@ import { EnvelopeOpen } from '@/components/animation/envelope-open';
 import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
 import { ArcoEmpty } from '@/components/arco/empty';
+import { AuthRequiredState } from '@/components/auth/auth-required-state';
 import { LoadingState } from '@/components/arco/loading-state';
 import { LetterPaper } from '@/components/arco/letter-paper';
 import { PageShell } from '@/components/layout/page-shell';
@@ -16,15 +17,28 @@ import { formatDateTime, formatRemaining } from '@/utils/time';
 
 const ReplyPage = observer(() => {
   const { params } = useRouter();
-  const { mailboxStore } = useRootStore();
+  const { mailboxStore, userStore } = useRootStore();
   const reply = mailboxStore.getReply(params.id);
   const letter = mailboxStore.getLetter(reply?.letterId);
   const [showOpenAnim, setShowOpenAnim] = useState(true);
   const [contentRevealed, setContentRevealed] = useState(false);
 
   useDidShow(() => {
-    void mailboxStore.refreshReplyDetail(params.id);
+    if (userStore.isAuthorized) {
+      void mailboxStore.refreshReplyDetail(params.id);
+    }
   });
+
+  if (!userStore.isAuthorized) {
+    return (
+      <PageShell
+        title='回响详情'
+        subtitle='完成微信授权后，才能打开这封回响。'
+      >
+        <AuthRequiredState description='请先回到首页，通过底部微信授权弹层进入后再查看回响内容。' />
+      </PageShell>
+    );
+  }
 
   if (mailboxStore.detailSyncing && !reply) {
     return (

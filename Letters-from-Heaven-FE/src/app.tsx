@@ -1,16 +1,19 @@
 import { PropsWithChildren } from 'react'
-import { useLaunch } from '@tarojs/taro'
 
 import { StoreProvider, useRootStore } from '@/stores/root-store'
 
 import './app.scss'
 
 function Bootstrap({ children }: PropsWithChildren) {
-  const { mailboxStore } = useRootStore()
+  const { mailboxStore, userStore } = useRootStore()
 
-  useLaunch(() => {
+  if (!userStore.hydrated) {
+    userStore.hydrate()
+  }
+
+  if (!mailboxStore.hydrated) {
     mailboxStore.hydrate()
-  })
+  }
 
   return children
 }
