@@ -189,7 +189,7 @@ Reply.belongsTo(Letter, {
 
 async function init() {
   await sequelize.authenticate();
-  await sequelize.sync({ alter: true });
+  await sequelize.sync();
 }
 
 module.exports = {
