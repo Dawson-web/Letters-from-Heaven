@@ -30,3 +30,7 @@ declare namespace NodeJS {
   }
 }
 
+declare const __API_BASE_URL__: string
+declare const __CLOUD_ENV__: string
+declare const __CLOUD_SERVICE__: string
+declare const __LOCAL_USER_ID__: string

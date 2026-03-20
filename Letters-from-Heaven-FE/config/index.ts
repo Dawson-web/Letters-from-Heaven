@@ -26,6 +26,10 @@ export default defineConfig<'vite'>(async (merge) => {
       "@tarojs/plugin-generator"
     ],
     defineConstants: {
+      __API_BASE_URL__: JSON.stringify(process.env.TARO_APP_API_BASE_URL || ''),
+      __CLOUD_ENV__: JSON.stringify(process.env.TARO_APP_CLOUD_ENV || ''),
+      __CLOUD_SERVICE__: JSON.stringify(process.env.TARO_APP_CLOUD_SERVICE || ''),
+      __LOCAL_USER_ID__: JSON.stringify(process.env.TARO_APP_LOCAL_USER_ID || ''),
     },
     copy: {
       patterns: [

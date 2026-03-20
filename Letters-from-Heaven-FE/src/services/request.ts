@@ -29,10 +29,10 @@ interface CloudContainerClient {
   }) => Promise<{ data: ApiEnvelope<T> }>
 }
 
-const API_BASE_URL = (process.env.TARO_APP_API_BASE_URL || '').trim()
-const CLOUD_ENV = (process.env.TARO_APP_CLOUD_ENV || '').trim()
-const CLOUD_SERVICE = (process.env.TARO_APP_CLOUD_SERVICE || '').trim()
-const LOCAL_USER_ID = (process.env.TARO_APP_LOCAL_USER_ID || '').trim()
+const API_BASE_URL = __API_BASE_URL__.trim()
+const CLOUD_ENV = __CLOUD_ENV__.trim()
+const CLOUD_SERVICE = __CLOUD_SERVICE__.trim()
+const LOCAL_USER_ID = __LOCAL_USER_ID__.trim()
 
 let cloudInitialized = false
 
