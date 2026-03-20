@@ -1,0 +1,348 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// @import './styles/animations.scss';
+
+// ─── CSS 变量 ───
+:root {
+  // 页面底色
+  --linen: #F6F4F0;
+  --parchment: #FFFDF8;
+
+  // 文字色层
+  --charcoal: #3D3A36;
+  --driftwood: #9B958D;
+  --fog: #C7C2BA;
+
+  // 线条
+  --linen-edge: #E8E4DD;
+
+  // 功能色
+  --stone: #8B7E6A;
+  --stone-deep: #7A6E5B;
+  --amber: #C4A882;
+  --sage: #8FA89A;
+  --terracotta: #C2907E;
+
+  // 装饰
+  --warm-glow: #F0E6D3;
+  --distant-blue: #D5DAE0;
+
+  // 信纸
+  --paper-line-color: rgba(232, 228, 221, 0.35);
+
+  // 缓动函数
+  --ease-calm: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+// ─── 全局基础 ───
+page {
+  min-height: 100%;
+  background: var(--linen);
+  color: var(--charcoal);
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+view,
+text,
+button,
+input,
+textarea {
+  box-sizing: border-box;
+}
+
+button {
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  border: 0;
+  background: transparent;
+}
+
+button::after {
+  border: 0;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+// ─── 信纸质感组件 ───
+.letter-paper {
+  position: relative;
+  border-radius: 32rpx;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, #FFFDF8 0%, #FBF6EF 100%);
+    border-radius: 32rpx;
+    border: 1px solid var(--linen-edge);
+    box-shadow:
+      0 1px 2px rgba(139, 126, 106, 0.06),
+      0 4px 16px rgba(139, 126, 106, 0.04);
+    z-index: 0;
+  }
+
+  // 横线纹理：间距 56rpx ≈ 28px，与 body line-height 1.8 × 15px 对齐
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    // 左侧 64rpx 装订留白不画线
+    left: 64rpx;
+    right: 0;
+    bottom: 0;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 55rpx,
+      var(--paper-line-color) 55rpx,
+      var(--paper-line-color) 56rpx
+    );
+    background-position: 0 80rpx;
+    border-radius: 32rpx;
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+.letter-paper-inner {
+  position: relative;
+  z-index: 2;
+  // 左侧多一些 padding 对齐装订留白
+  padding: 40rpx 40rpx 40rpx 64rpx;
+}
+
+// ─── 信封发送动画遮罩 ───
+.envelope-send-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--linen);
+  animation: overlayFadeIn 0.4s var(--ease-calm) both;
+}
+
+.envelope-send-overlay--out {
+  animation: overlayFadeOut 0.5s var(--ease-calm) both;
+}
+
+.envelope-send-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.envelope-send-lottie {
+  display: block;
+}
+
+.envelope-send-fallback {
+  display: none;
+}
+
+// CSS 回退动画（Lottie 失败时显示）
+.envelope-send-fallback-visible {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.envelope-css-icon {
+  animation: breathe 2s var(--ease-calm) infinite;
+}
+
+.envelope-css-fly {
+  animation: envelopeFlyUp 2s var(--ease-calm) both;
+  animation-delay: 0.3s;
+}
+
+// CSS 信封图标（大号，替代 emoji）
+.envelope-icon-lg {
+  position: relative;
+  width: 72px;
+  height: 50px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 4px;
+    border: 2px solid var(--driftwood);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 0;
+    right: 0;
+    height: 22px;
+    border-left: 2px solid var(--driftwood);
+    border-right: 2px solid var(--driftwood);
+    border-top: 2px solid var(--driftwood);
+    border-radius: 4px 4px 0 0;
+    clip-path: polygon(0 0, 50% 100%, 100% 0);
+  }
+}
+
+// ─── 开信动画遮罩 ───
+.envelope-open-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  // 和页面同底色，不用深色戏剧感
+  background: var(--linen);
+  animation: overlayFadeIn 0.4s var(--ease-calm) both;
+}
+
+.envelope-open-cover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.envelope-cover-icon {
+  animation: float 6s ease-in-out infinite;
+}
+
+.envelope-open-playing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.envelope-open-lottie {
+  display: block;
+}
+
+.envelope-open-css-fallback {
+  display: none;
+}
+
+// CSS 回退动画（Lottie 失败时显示）
+.envelope-open-css-fallback-visible {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.envelope-css-open-anim {
+  animation: scaleIn 0.5s var(--ease-calm) both;
+}
+
+// ─── 按钮交互 ───
+.btn-press {
+  transition: transform 0.15s var(--ease-calm), opacity 0.15s var(--ease-calm);
+
+  &:active {
+    transform: scale(0.97);
+    opacity: 0.85;
+  }
+}
+
+// ─── 卡片入场 ───
+.card-enter {
+  animation: fadeInUp 0.4s var(--ease-calm) both;
+}
+
+// ─── 标签选中弹性 ───
+.tag-select {
+  animation: tagBounce 0.2s var(--ease-bounce) both;
+}
+
+// ─── 状态指示 ───
+.dot-ready {
+  display: inline-block;
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: var(--sage);
+}
+
+.dot-waiting {
+  display: inline-block;
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  border: 3rpx solid var(--amber);
+  background: transparent;
+  animation: pulseSoft 2.5s ease-in-out infinite;
+}
+
+// ─── 分割点 ───
+.divider-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  padding: 32rpx 0;
+}
+
+.divider-dot {
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: #DDD8D0;
+}
+
+// ─── 渐隐分割线 ───
+.divider-fade {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--linen-edge) 50%, transparent 100%);
+}
+
+// ─── 统计数字 ───
+.stat-number {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+// ─── 首页介绍文字 — 信封感彩色下划线 ───
+.letter-intro-highlight {
+  color: var(--stone);
+  position: relative;
+  // 使用 background-image 模拟手写下划线
+  background-image: linear-gradient(
+    to right,
+    rgba(196, 168, 130, 0.35) 0%,
+    rgba(143, 168, 154, 0.35) 50%,
+    rgba(196, 168, 130, 0.35) 100%
+  );
+  background-position: 0 bottom;
+  background-size: 100% 4rpx;
+  background-repeat: no-repeat;
+  padding-bottom: 4rpx;
+}

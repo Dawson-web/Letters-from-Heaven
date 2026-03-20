@@ -1,0 +1,171 @@
+// 动画系统 — 云端回信
+// 全局缓动：cubic-bezier(0.25, 0.1, 0.25, 1)
+// 所有位移距离 ≤ 32rpx，所有缩放 ≥ 0.95
+
+// ─── 入场动画 ───
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scaleShrink {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+// ─── 标签选中 ───
+@keyframes tagBounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+// ─── 循环动画 ───
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-16rpx); }
+}
+
+@keyframes pulseSoft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+}
+
+// ─── 特殊动画 ───
+@keyframes envelopeFlyUp {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(16rpx) scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-320rpx) scale(0.7);
+  }
+}
+
+@keyframes letterReveal {
+  from {
+    opacity: 0;
+    transform: translateY(32rpx);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+// ─── 遮罩动画 ───
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes overlayFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+// ─── Utility 类 ───
+// 全部使用 --ease-calm: cubic-bezier(0.25, 0.1, 0.25, 1)
+
+.anim-fade-in {
+  animation: fadeIn 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+
+.anim-fade-in-up {
+  animation: fadeInUp 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+
+.anim-fade-in-down {
+  animation: fadeInDown 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+
+.anim-scale-in {
+  animation: scaleIn 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+
+.anim-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.anim-pulse-soft {
+  animation: pulseSoft 2.5s ease-in-out infinite;
+}
+
+.anim-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+.anim-letter-reveal {
+  animation: letterReveal 0.6s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+
+// ─── Stagger 延迟（每级 80ms，用于卡片 stagger） ───
+@for $i from 1 through 10 {
+  .anim-delay-#{$i} {
+    animation-delay: #{$i * 0.08}s;
+  }
+}
+
+// ─── 阅读页专用慢延迟（每级 200ms，用于段落逐段出现） ───
+@for $i from 1 through 10 {
+  .anim-read-delay-#{$i} {
+    animation-delay: #{$i * 0.2}s;
+  }
+}
