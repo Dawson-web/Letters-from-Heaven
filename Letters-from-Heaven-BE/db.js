@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes } = require("sequelize");
+const { applyMigrations } = require("./migrations");
 
 const {
   MYSQL_USERNAME,
@@ -122,7 +123,23 @@ const Reply = sequelize.define(
     letterId: {
       type: DataTypes.STRING(48),
       allowNull: false,
-      unique: true,
+    },
+    sourceType: {
+      type: DataTypes.STRING(16),
+      allowNull: false,
+      defaultValue: "letter",
+    },
+    memorialProfileId: {
+      type: DataTypes.STRING(48),
+      allowNull: true,
+    },
+    memorialEventId: {
+      type: DataTypes.STRING(48),
+      allowNull: true,
+    },
+    sourceLetterId: {
+      type: DataTypes.STRING(48),
+      allowNull: true,
     },
     status: {
       type: DataTypes.STRING(16),
@@ -156,6 +173,126 @@ const Reply = sequelize.define(
   }
 );
 
+const MemorialProfile = sequelize.define(
+  "MemorialProfile",
+  {
+    id: {
+      type: DataTypes.STRING(48),
+      allowNull: false,
+      primaryKey: true,
+    },
+    userId: {
+      type: DataTypes.STRING(128),
+      allowNull: false,
+    },
+    relation: {
+      type: DataTypes.STRING(16),
+      allowNull: false,
+    },
+    displayName: {
+      type: DataTypes.STRING(32),
+      allowNull: false,
+      defaultValue: "",
+    },
+    keywords: {
+      type: DataTypes.STRING(128),
+      allowNull: false,
+      defaultValue: "",
+    },
+    note: {
+      type: DataTypes.TEXT("long"),
+      allowNull: true,
+    },
+    timezone: {
+      type: DataTypes.STRING(64),
+      allowNull: false,
+      defaultValue: "Asia/Shanghai",
+    },
+    active: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+    createdAtMs: {
+      type: DataTypes.BIGINT,
+      allowNull: false,
+    },
+    updatedAtMs: {
+      type: DataTypes.BIGINT,
+      allowNull: false,
+    },
+  },
+  {
+    tableName: "memorial_profiles",
+    timestamps: false,
+  }
+);
+
+const MemorialEvent = sequelize.define(
+  "MemorialEvent",
+  {
+    id: {
+      type: DataTypes.STRING(48),
+      allowNull: false,
+      primaryKey: true,
+    },
+    profileId: {
+      type: DataTypes.STRING(48),
+      allowNull: false,
+    },
+    type: {
+      type: DataTypes.STRING(16),
+      allowNull: false,
+    },
+    month: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    day: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    label: {
+      type: DataTypes.STRING(32),
+      allowNull: false,
+      defaultValue: "",
+    },
+    windowStartDays: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: -1,
+    },
+    windowEndDays: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+    },
+    deliverAtHour: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 9,
+    },
+    enabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+    nextTriggerAtMs: {
+      type: DataTypes.BIGINT,
+      allowNull: false,
+    },
+    lastTriggeredYear: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+  },
+  {
+    tableName: "memorial_events",
+    timestamps: false,
+  }
+);
+
 User.hasMany(Letter, {
   foreignKey: "userId",
   sourceKey: "id",
@@ -165,6 +302,11 @@ User.hasMany(Reply, {
   foreignKey: "userId",
   sourceKey: "id",
   as: "replies",
+});
+User.hasMany(MemorialProfile, {
+  foreignKey: "userId",
+  sourceKey: "id",
+  as: "memorialProfiles",
 });
 Letter.belongsTo(User, {
   foreignKey: "userId",
@@ -176,19 +318,45 @@ Reply.belongsTo(User, {
   targetKey: "id",
   as: "user",
 });
-Letter.hasOne(Reply, {
+MemorialProfile.belongsTo(User, {
+  foreignKey: "userId",
+  targetKey: "id",
+  as: "user",
+});
+MemorialProfile.hasMany(MemorialEvent, {
+  foreignKey: "profileId",
+  sourceKey: "id",
+  as: "events",
+});
+MemorialEvent.belongsTo(MemorialProfile, {
+  foreignKey: "profileId",
+  targetKey: "id",
+  as: "profile",
+});
+Letter.hasMany(Reply, {
   foreignKey: "letterId",
   sourceKey: "id",
-  as: "reply",
+  as: "replies",
 });
 Reply.belongsTo(Letter, {
   foreignKey: "letterId",
   targetKey: "id",
   as: "letter",
 });
+Reply.belongsTo(MemorialProfile, {
+  foreignKey: "memorialProfileId",
+  targetKey: "id",
+  as: "memorialProfile",
+});
+Reply.belongsTo(MemorialEvent, {
+  foreignKey: "memorialEventId",
+  targetKey: "id",
+  as: "memorialEvent",
+});
 
 async function init() {
   await sequelize.authenticate();
+  await applyMigrations(sequelize);
   await sequelize.sync();
 }
 
@@ -199,4 +367,6 @@ module.exports = {
   User,
   Letter,
   Reply,
+  MemorialProfile,
+  MemorialEvent,
 };

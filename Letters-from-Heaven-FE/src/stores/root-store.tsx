@@ -1,11 +1,11 @@
 import { PropsWithChildren, createContext, useContext } from 'react'
 
 import { MailboxStore } from '@/stores/mailbox-store'
-import { UserStore } from '@/stores/user-store'
+import { MemorialStore } from '@/stores/memorial-store'
 
 const rootStore = {
   mailboxStore: new MailboxStore(),
-  userStore: new UserStore(),
+  memorialStore: new MemorialStore(),
 }
 
 const RootStoreContext = createContext(rootStore)

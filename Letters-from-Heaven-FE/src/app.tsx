@@ -5,11 +5,7 @@ import { StoreProvider, useRootStore } from '@/stores/root-store'
 import './app.scss'
 
 function Bootstrap({ children }: PropsWithChildren) {
-  const { mailboxStore, userStore } = useRootStore()
-
-  if (!userStore.hydrated) {
-    userStore.hydrate()
-  }
+  const { mailboxStore } = useRootStore()
 
   if (!mailboxStore.hydrated) {
     mailboxStore.hydrate()

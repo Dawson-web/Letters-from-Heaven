@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro'
 
-type RequestMethod = 'GET' | 'POST' | 'DELETE'
+type RequestMethod = 'GET' | 'POST' | 'DELETE' | 'PATCH'
 
 interface ApiEnvelope<T> {
   code: number

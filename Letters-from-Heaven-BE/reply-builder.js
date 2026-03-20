@@ -12,6 +12,18 @@ function excerpt(input) {
   return normalized.slice(0, 20);
 }
 
+function memorialExcerpt(profile, letter) {
+  if (letter && letter.body) {
+    return excerpt(letter.body);
+  }
+
+  const fallback = [profile?.keywords, profile?.note]
+    .filter(Boolean)
+    .join(" ");
+
+  return excerpt(fallback || "今天的想念");
+}
+
 function greetingFor(relation) {
   switch (relation) {
     case "妈妈":
@@ -38,6 +50,19 @@ function comfortFor(relation) {
       return "不用把遗憾都变成惩罚自己，慢一点也没关系。";
     default:
       return "允许自己想念，允许自己软弱，这本来就是爱留下的痕迹。";
+  }
+}
+
+function memorialLabel(event) {
+  switch (event?.type) {
+    case "qingming":
+      return "清明回响";
+    case "birthday":
+      return "生日回响";
+    case "anniversary":
+      return "周年回响";
+    default:
+      return event?.label || "纪念回响";
   }
 }
 
@@ -72,7 +97,43 @@ function buildReadyReplyPayload(letter) {
   };
 }
 
+function buildMemorialWaitingPayload(profile, event, now, availableAtMs) {
+  const label = memorialLabel(event);
+  const name = profile?.displayName || profile?.relation || "远方";
+  return {
+    status: REPLY_STATUS.WAITING,
+    createdAtMs: now,
+    availableAtMs,
+    subject: `${name} · ${label}`,
+    preview: "纪念回响正在酝酿，会在一段时间后送达。",
+    body: "",
+  };
+}
+
+function buildMemorialReadyPayload(profile, letter, event) {
+  const greeting = greetingFor(profile?.relation);
+  const label = memorialLabel(event);
+  const body = [
+    `${greeting}：`,
+    `在${label}这天，我看见你想起了“${memorialExcerpt(profile, letter)}”。`,
+    comfortFor(profile?.relation),
+    "把思念放在心里，也允许它在某个日子里轻轻浮现。",
+    profile?.displayName
+      ? `你一直记得“${profile.displayName}”。`
+      : "你一直记得那些重要的名字。",
+  ].join("\n\n");
+
+  return {
+    status: REPLY_STATUS.READY,
+    subject: `${profile?.displayName || profile?.relation || "远方"} · ${label}`,
+    preview: "这份纪念已被认真接住。",
+    body,
+  };
+}
+
 module.exports = {
   buildWaitingReplyPayload,
   buildReadyReplyPayload,
+  buildMemorialWaitingPayload,
+  buildMemorialReadyPayload,
 };

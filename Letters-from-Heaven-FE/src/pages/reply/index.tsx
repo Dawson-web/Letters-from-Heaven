@@ -8,7 +8,6 @@ import { EnvelopeOpen } from '@/components/animation/envelope-open';
 import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
 import { ArcoEmpty } from '@/components/arco/empty';
-import { AuthRequiredState } from '@/components/auth/auth-required-state';
 import { LoadingState } from '@/components/arco/loading-state';
 import { LetterPaper } from '@/components/arco/letter-paper';
 import { PageShell } from '@/components/layout/page-shell';
@@ -17,28 +16,15 @@ import { formatDateTime, formatRemaining } from '@/utils/time';
 
 const ReplyPage = observer(() => {
   const { params } = useRouter();
-  const { mailboxStore, userStore } = useRootStore();
+  const { mailboxStore, memorialStore } = useRootStore();
   const reply = mailboxStore.getReply(params.id);
-  const letter = mailboxStore.getLetter(reply?.letterId);
+  const letter = mailboxStore.getLetter(reply?.sourceLetterId || reply?.letterId);
   const [showOpenAnim, setShowOpenAnim] = useState(true);
   const [contentRevealed, setContentRevealed] = useState(false);
 
   useDidShow(() => {
-    if (userStore.isAuthorized) {
-      void mailboxStore.refreshReplyDetail(params.id);
-    }
+    void mailboxStore.refreshReplyDetail(params.id);
   });
-
-  if (!userStore.isAuthorized) {
-    return (
-      <PageShell
-        title='回响详情'
-        subtitle='完成微信授权后，才能打开这封回响。'
-      >
-        <AuthRequiredState description='请先回到首页，通过底部微信授权弹层进入后再查看回响内容。' />
-      </PageShell>
-    );
-  }
 
   if (mailboxStore.detailSyncing && !reply) {
     return (
@@ -64,15 +50,19 @@ const ReplyPage = observer(() => {
 
   // 回信仍在等待中
   if (reply.status === 'waiting') {
+    const waitingStamp = formatDateTime(reply.createdAt).slice(5, 10).replace('-', '.');
     return (
       <PageShell title='回响仍在路上' subtitle='延迟本身也是这份体验的一部分。'>
         <ArcoCard delay={1}>
           <AnimatedView animation='fade-in-up'>
-            <Text className='text-heading text-charcoal'>{reply.subject}</Text>
+            <View className='flex items-center justify-between gap-3'>
+              <Text className='flex-1 text-heading text-charcoal'>{reply.subject}</Text>
+              <View className='postmark-ring'>{waitingStamp}</View>
+            </View>
             <Text className='mt-3 block text-body text-driftwood'>
               这封回响还在安静酝酿，预计 {formatRemaining(reply.availableAt)}。
             </Text>
-            <Text className='mt-3 block text-overline text-fog'>
+            <Text className='mt-3 block text-overline text-driftwood'>
               你原信写于 {formatDateTime(reply.createdAt)}
             </Text>
           </AnimatedView>
@@ -102,16 +92,44 @@ const ReplyPage = observer(() => {
   }
 
   // 回信正文
+  const detailStamp = formatDateTime(reply.createdAt).slice(5, 10).replace('-', '.');
   return (
     <PageShell
       title={reply.subject}
       subtitle='由系统生成的回响，用来承接思念，不代表逝者真实意志。'
     >
+      {reply.sourceType === 'memorial' ? (
+        <AnimatedView animation='fade-in-up' delay={1}>
+          <Text className='text-overline text-fog'>
+            {(() => {
+              const event = memorialStore.getEvent(reply.memorialEventId);
+              if (!event) {
+                return '纪念回响';
+              }
+
+              switch (event.type) {
+                case 'qingming':
+                  return '清明回响';
+                case 'birthday':
+                  return '生日回响';
+                case 'anniversary':
+                  return '周年回响';
+                default:
+                  return event.label || '纪念回响';
+              }
+            })()}
+          </Text>
+        </AnimatedView>
+      ) : null}
+
       {/* 原信信息 — 不用卡片，用渐隐分割线隔开 */}
-      <AnimatedView animation='fade-in-up' delay={1}>
-        <Text className='text-overline text-fog'>
-          原信时间：{formatDateTime(reply.createdAt)}
-        </Text>
+      <AnimatedView animation='fade-in-up' delay={2}>
+        <View className='flex items-center justify-between'>
+          <Text className='text-overline text-driftwood'>
+            原信时间：{formatDateTime(reply.createdAt)}
+          </Text>
+          <View className='postmark'>{detailStamp}</View>
+        </View>
         {letter?.title ? (
           <Text className='mt-1 block text-caption text-driftwood'>
             原信标题：{letter.title}
@@ -121,7 +139,7 @@ const ReplyPage = observer(() => {
       </AnimatedView>
 
       {/* 回信正文 — 信纸质感，段落逐段入场 */}
-      <AnimatedView animation='letter-reveal' delay={2}>
+      <AnimatedView animation='letter-reveal' delay={3}>
         <LetterPaper>
           <View className='flex flex-col gap-5'>
             {reply.body.split('\n\n').map((paragraph, index) => (
@@ -140,7 +158,7 @@ const ReplyPage = observer(() => {
 
       {/* 温柔提示 */}
       <AnimatedView animation='fade-in' delay={6}>
-        <Text className='block text-center text-caption text-fog'>
+        <Text className='block text-center text-caption text-driftwood'>
           这封回响由系统生成，用来承接思念，而非还原真实
         </Text>
       </AnimatedView>

@@ -9,7 +9,6 @@ import {
   fetchReplyDetail,
 } from '@/services/mailbox'
 import { getErrorMessage } from '@/services/request'
-import { ensureAuthorizedUser, hasAuthorizedUserProfile } from '@/utils/auth'
 import type {
   LetterDraft,
   LetterRecord,
@@ -125,7 +124,7 @@ export class MailboxStore {
   }
 
   async refreshReplies() {
-    if (!this.hydrated || this.syncing || !hasAuthorizedUserProfile()) {
+    if (!this.hydrated || this.syncing) {
       return
     }
 
@@ -153,8 +152,6 @@ export class MailboxStore {
   }
 
   async sendLetter(payload: LetterDraft) {
-    ensureAuthorizedUser('请先完成微信授权后再写信')
-
     if (this.sending) {
       throw new Error('当前已有信件正在投递')
     }
@@ -187,7 +184,7 @@ export class MailboxStore {
   }
 
   async refreshReplyDetail(id?: string) {
-    if (!id || !hasAuthorizedUserProfile()) {
+    if (!id) {
       return undefined
     }
 
@@ -249,8 +246,6 @@ export class MailboxStore {
   }
 
   async clearAll() {
-    ensureAuthorizedUser('请先完成微信授权后再使用信箱管理')
-
     this.resetting = true
 
     try {

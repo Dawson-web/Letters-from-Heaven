@@ -14,6 +14,17 @@ const {
   listReplies,
   touchUser,
 } = require("./mailbox-service");
+const {
+  listMemorialProfiles,
+  createMemorialProfile,
+  updateMemorialProfile,
+  deleteMemorialProfile,
+  listMemorialEvents,
+  createMemorialEvent,
+  updateMemorialEvent,
+  deleteMemorialEvent,
+  triggerMemorialReplies,
+} = require("./memorial-service");
 
 const logger = morgan("tiny");
 
@@ -37,6 +48,20 @@ function requireUser(req, res, next) {
 
   req.userContext = userContext;
   next();
+}
+
+function requireJobToken(req, res, next) {
+  const expected = process.env.JOB_TOKEN;
+  if (!expected) {
+    return next();
+  }
+
+  const provided = req.headers["x-job-token"];
+  if (provided !== expected) {
+    return next(new AppError(403, "Invalid job token"));
+  }
+
+  return next();
 }
 
 // 首页
@@ -100,6 +125,55 @@ app.get("/api/replies", requireUser, asyncHandler(async (req, res) => {
 
 app.get("/api/replies/:id", requireUser, asyncHandler(async (req, res) => {
   sendSuccess(res, await getReplyDetail(req.userContext, req.params.id));
+}));
+
+// 纪念档案
+app.get("/api/memorial-profiles", requireUser, asyncHandler(async (req, res) => {
+  sendSuccess(res, await listMemorialProfiles(req.userContext));
+}));
+
+app.post("/api/memorial-profiles", requireUser, asyncHandler(async (req, res) => {
+  sendSuccess(res, await createMemorialProfile(req.userContext, req.body));
+}));
+
+app.patch("/api/memorial-profiles/:id", requireUser, asyncHandler(async (req, res) => {
+  sendSuccess(res, await updateMemorialProfile(req.userContext, req.params.id, req.body));
+}));
+
+app.delete("/api/memorial-profiles/:id", requireUser, asyncHandler(async (req, res) => {
+  sendSuccess(res, await deleteMemorialProfile(req.userContext, req.params.id));
+}));
+
+app.get(
+  "/api/memorial-profiles/:id/events",
+  requireUser,
+  asyncHandler(async (req, res) => {
+    sendSuccess(res, await listMemorialEvents(req.userContext, req.params.id));
+  })
+);
+
+app.post(
+  "/api/memorial-profiles/:id/events",
+  requireUser,
+  asyncHandler(async (req, res) => {
+    sendSuccess(
+      res,
+      await createMemorialEvent(req.userContext, req.params.id, req.body)
+    );
+  })
+);
+
+app.patch("/api/memorial-events/:id", requireUser, asyncHandler(async (req, res) => {
+  sendSuccess(res, await updateMemorialEvent(req.userContext, req.params.id, req.body));
+}));
+
+app.delete("/api/memorial-events/:id", requireUser, asyncHandler(async (req, res) => {
+  sendSuccess(res, await deleteMemorialEvent(req.userContext, req.params.id));
+}));
+
+// 定时任务触发
+app.post("/api/jobs/memorial/trigger", requireJobToken, asyncHandler(async (req, res) => {
+  sendSuccess(res, await triggerMemorialReplies());
 }));
 
 // 小程序调用，获取微信 Open ID

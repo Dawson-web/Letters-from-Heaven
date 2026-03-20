@@ -5,7 +5,9 @@ export default defineAppConfig({
     'pages/sent/index',
     'pages/inbox/index',
     'pages/reply/index',
-    'pages/profile/index'
+    'pages/profile/index',
+    'pages/memorial/index',
+    'pages/memorial-edit/index'
   ],
   window: {
     backgroundTextStyle: 'dark',

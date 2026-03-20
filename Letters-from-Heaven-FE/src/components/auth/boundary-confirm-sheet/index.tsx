@@ -15,15 +15,16 @@ export function BoundaryConfirmSheet({ onConfirm }: BoundaryConfirmSheetProps) {
       <AnimatedView animation='fade-in-up' className='boundary-confirm-sheet'>
         <View className='boundary-confirm-handle' />
 
-        <Text className='boundary-confirm-title'>使用前请先确认边界</Text>
+        <Text className='boundary-confirm-eyebrow'>使用前说明</Text>
+        <Text className='boundary-confirm-title'>这是一座安静的信箱，不是真人重现</Text>
         <Text className='boundary-confirm-copy'>
-          回信由 AI 生成，只用于情绪承接与纪念表达，不代表逝者真实态度。
+          回信由 AI 生成，只用于情绪承接与纪念表达，不代表逝者真实态度，也不还原真实关系。
         </Text>
         <Text className='boundary-confirm-copy'>
-          体验版回响会在约 90 秒后送达，正式版可切换到纪念日节奏。
+          体验版回响会在约 90 秒后送达。正式版可以切换到纪念日、生日等更有节奏感的送达方式。
         </Text>
         <Text className='boundary-confirm-note'>
-          在强烈哀伤或危机场景中，它不应作为唯一支持渠道。
+          如果你正处在强烈哀伤或危机场景中，它不应成为唯一支持渠道。
         </Text>
 
         <View className='mt-6'>

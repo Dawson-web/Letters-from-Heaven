@@ -15,19 +15,15 @@ export function LoadingState({
   className,
 }: LoadingStateProps) {
   return (
-    <View className={cn('flex flex-col items-center justify-center py-16', className)}>
-      <View className='flex gap-2'>
-        <View className='h-1.5 w-1.5 rounded-full bg-fog anim-pulse-soft' />
-        <View
-          className='h-1.5 w-1.5 rounded-full bg-fog anim-pulse-soft'
-          style={{ animationDelay: '0.2s' }}
-        />
-        <View
-          className='h-1.5 w-1.5 rounded-full bg-fog anim-pulse-soft'
-          style={{ animationDelay: '0.4s' }}
-        />
+    <View className={cn('flex flex-col items-center justify-center py-12', className)}>
+      <View className='w-full max-w-[520px]'>
+        <View className='paper-skeleton'>
+          <View className='paper-skeleton-bar long' />
+          <View className='paper-skeleton-bar medium' />
+          <View className='paper-skeleton-bar short' />
+        </View>
       </View>
-      <Text className='mt-4 text-caption text-fog'>{text}</Text>
+      <Text className='mt-5 text-caption text-driftwood'>{text}</Text>
     </View>
   );
 }

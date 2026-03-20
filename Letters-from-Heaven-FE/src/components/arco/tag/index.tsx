@@ -23,7 +23,7 @@ export function ArcoTag({ active, children, onClick }: ArcoTagProps) {
           ? 'bg-stone tag-select'
           : 'border border-linen-edge bg-linen',
       )}
-      style={{ height: '36px' }}
+      style={{ height: '40px' }}
       onClick={onClick}
     >
       <Text className={cn('text-caption', active ? 'text-white font-medium' : 'text-driftwood')}>

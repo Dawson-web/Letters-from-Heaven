@@ -10,6 +10,7 @@ export type RelationOption =
   | '其他'
 
 export type ReplyStatus = 'waiting' | 'ready'
+export type ReplySourceType = 'letter' | 'memorial'
 
 export interface LetterDraft {
   title: string
@@ -27,6 +28,10 @@ export interface LetterRecord extends LetterDraft {
 export interface ReplyRecord {
   id: string
   letterId: string
+  sourceType: ReplySourceType
+  memorialProfileId?: string | null
+  memorialEventId?: string | null
+  sourceLetterId?: string | null
   status: ReplyStatus
   createdAt: number
   availableAt: number

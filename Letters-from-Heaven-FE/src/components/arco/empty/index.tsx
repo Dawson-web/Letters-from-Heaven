@@ -22,7 +22,7 @@ export function ArcoEmpty({
   return (
     <View className='px-6 py-16 text-center anim-fade-in-up'>
       {/* 线条信封图标 — 用 CSS 模拟 */}
-      <View className='mb-6 flex items-center justify-center'>
+      <View className='mb-6 flex items-center justify-center gap-4'>
         <View
           className='relative'
           style={{ width: '64px', height: '44px' }}
@@ -55,6 +55,7 @@ export function ArcoEmpty({
             }}
           />
         </View>
+        <View className='postmark-ring'>POST</View>
       </View>
       <Text className='text-heading text-charcoal'>{title}</Text>
       <Text className='mt-3 block text-body text-driftwood'>

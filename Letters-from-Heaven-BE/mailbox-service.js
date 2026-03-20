@@ -1,9 +1,22 @@
-const { Letter, Reply, User, sequelize } = require("./db");
+const {
+  Letter,
+  Reply,
+  User,
+  MemorialProfile,
+  MemorialEvent,
+  sequelize,
+} = require("./db");
 const { AppError } = require("./errors");
-const { RELATION_OPTIONS, REPLY_STATUS } = require("./constants");
+const {
+  RELATION_OPTIONS,
+  REPLY_STATUS,
+  MEMORIAL_SOURCE_TYPE,
+} = require("./constants");
 const {
   buildWaitingReplyPayload,
   buildReadyReplyPayload,
+  buildMemorialWaitingPayload,
+  buildMemorialReadyPayload,
 } = require("./reply-builder");
 
 function createId(prefix) {
@@ -42,6 +55,10 @@ function serializeReply(reply) {
     id: reply.id,
     userId: reply.userId,
     letterId: reply.letterId,
+    sourceType: reply.sourceType,
+    memorialProfileId: reply.memorialProfileId,
+    memorialEventId: reply.memorialEventId,
+    sourceLetterId: reply.sourceLetterId,
     status: reply.status,
     createdAt: Number(reply.createdAtMs),
     availableAt: Number(reply.availableAtMs),
@@ -103,7 +120,37 @@ async function settleReply(reply, letter) {
     return reply;
   }
 
-  const sourceLetter = letter || (await Letter.findByPk(reply.letterId));
+  const sourceLetter =
+    letter ||
+    (reply.sourceLetterId
+      ? await Letter.findByPk(reply.sourceLetterId)
+      : await Letter.findByPk(reply.letterId));
+
+  if (reply.sourceType === MEMORIAL_SOURCE_TYPE.MEMORIAL) {
+    const memorialProfile = reply.memorialProfileId
+      ? await MemorialProfile.findByPk(reply.memorialProfileId)
+      : null;
+    const memorialEvent = reply.memorialEventId
+      ? await MemorialEvent.findByPk(reply.memorialEventId)
+      : null;
+
+    if (!memorialProfile || !memorialEvent) {
+      return reply;
+    }
+
+    const readyPayload = buildMemorialReadyPayload(
+      memorialProfile,
+      sourceLetter,
+      memorialEvent
+    );
+    reply.status = readyPayload.status;
+    reply.subject = readyPayload.subject;
+    reply.preview = readyPayload.preview;
+    reply.body = readyPayload.body;
+    await reply.save();
+    return reply;
+  }
+
   if (!sourceLetter) {
     return reply;
   }
@@ -158,6 +205,10 @@ async function createLetter(userContext, payload) {
         id: replyId,
         userId: userContext.userId,
         letterId,
+        sourceType: MEMORIAL_SOURCE_TYPE.LETTER,
+        memorialProfileId: null,
+        memorialEventId: null,
+        sourceLetterId: letterId,
         status: replyPayload.status,
         createdAtMs: replyPayload.createdAtMs,
         availableAtMs: replyPayload.availableAtMs,
@@ -216,7 +267,7 @@ async function getReplyDetail(userContext, replyId) {
 
   const letter = await Letter.findOne({
     where: {
-      id: reply.letterId,
+      id: reply.sourceLetterId || reply.letterId,
       userId: userContext.userId,
     },
   });

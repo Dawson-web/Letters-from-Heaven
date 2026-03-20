@@ -20,7 +20,7 @@ export function ArcoCard({ className, children, delay, onClick }: ArcoCardProps)
   return (
     <View
       className={cn(
-        'rounded-card border border-linen-edge bg-parchment p-6 shadow-card card-enter',
+        'rounded-card border border-linen-edge bg-parchment p-7 shadow-card card-enter card-secondary',
         delay ? `anim-delay-${delay}` : undefined,
         className,
       )}

@@ -38,8 +38,8 @@ export function ArcoButton({
   return (
     <View
       className={cn(
-        'flex items-center justify-center rounded-xl px-6 text-body font-medium btn-press',
-        variant === 'text' ? 'h-auto py-2' : 'h-12',
+        'flex items-center justify-center rounded-2xl px-7 text-body font-medium btn-press',
+        variant === 'text' ? 'h-auto py-2' : 'h-[52px]',
         variantClasses[variant],
         isDisabled && 'opacity-35',
         className,
