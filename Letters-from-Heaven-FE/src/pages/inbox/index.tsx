@@ -4,6 +4,7 @@ import { observer } from 'mobx-react-lite';
 
 import { ArcoCard } from '@/components/arco/card';
 import { ArcoEmpty } from '@/components/arco/empty';
+import { LoadingState } from '@/components/arco/loading-state';
 import { PageShell } from '@/components/layout/page-shell';
 import { useRootStore } from '@/stores/root-store';
 import { formatDateTime, formatRemaining } from '@/utils/time';
@@ -12,7 +13,7 @@ const InboxPage = observer(() => {
   const { mailboxStore } = useRootStore();
 
   useDidShow(() => {
-    mailboxStore.refreshReplies();
+    void mailboxStore.refreshReplies();
   });
 
   return (
@@ -20,7 +21,9 @@ const InboxPage = observer(() => {
       title='收件箱'
       subtitle='等待你愿意打开的那一刻。'
     >
-      {mailboxStore.inboxItems.length === 0 ? (
+      {mailboxStore.syncing && mailboxStore.inboxItems.length === 0 ? (
+        <LoadingState text='正在同步信箱…' />
+      ) : mailboxStore.inboxItems.length === 0 ? (
         <ArcoEmpty
           title='还没有回响'
           description='写下第一封信后，这里会开始有故事。'

@@ -8,6 +8,7 @@ import { EnvelopeOpen } from '@/components/animation/envelope-open';
 import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
 import { ArcoEmpty } from '@/components/arco/empty';
+import { LoadingState } from '@/components/arco/loading-state';
 import { LetterPaper } from '@/components/arco/letter-paper';
 import { PageShell } from '@/components/layout/page-shell';
 import { useRootStore } from '@/stores/root-store';
@@ -22,8 +23,16 @@ const ReplyPage = observer(() => {
   const [contentRevealed, setContentRevealed] = useState(false);
 
   useDidShow(() => {
-    mailboxStore.refreshReplies();
+    void mailboxStore.refreshReplyDetail(params.id);
   });
+
+  if (mailboxStore.detailSyncing && !reply) {
+    return (
+      <PageShell title='回响详情' subtitle='正在查找这封回响。'>
+        <LoadingState text='正在同步回响…' />
+      </PageShell>
+    );
+  }
 
   // 没找到回信
   if (!reply) {
@@ -56,7 +65,9 @@ const ReplyPage = observer(() => {
         </ArcoCard>
 
         <AnimatedView animation='fade-in-up' delay={2}>
-          <ArcoButton onClick={mailboxStore.refreshReplies}>刷新状态</ArcoButton>
+          <ArcoButton onClick={() => void mailboxStore.refreshReplyDetail(reply.id)}>
+            刷新状态
+          </ArcoButton>
         </AnimatedView>
       </PageShell>
     );

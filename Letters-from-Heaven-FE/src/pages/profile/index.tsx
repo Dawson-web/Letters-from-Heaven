@@ -7,6 +7,7 @@ import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
 import { ArcoNotice } from '@/components/arco/notice';
 import { PageShell } from '@/components/layout/page-shell';
+import { getErrorMessage } from '@/services/request';
 import { useRootStore } from '@/stores/root-store';
 
 const ProfilePage = observer(() => {
@@ -19,12 +20,21 @@ const ProfilePage = observer(() => {
 
   const handleReset = () => {
     Taro.showModal({
-      title: '清空本机数据',
-      content: '这会删除当前设备上的草稿和回信记录，无法恢复。',
-      success(result) {
+      title: '清空信箱数据',
+      content: '这会删除当前账号下的草稿、信件与回响记录，无法恢复。',
+      success: (result) => {
         if (result.confirm) {
-          mailboxStore.resetAll();
-          Taro.showToast({ title: '已清空', icon: 'none' });
+          void mailboxStore
+            .resetAll()
+            .then(() => {
+              Taro.showToast({ title: '已清空', icon: 'none' });
+            })
+            .catch((error) => {
+              Taro.showToast({
+                title: getErrorMessage(error),
+                icon: 'none',
+              });
+            });
         }
       },
     });
@@ -82,7 +92,7 @@ const ProfilePage = observer(() => {
           className='text-terracotta'
           onClick={handleReset}
         >
-          清空本机信箱
+          清空云端信箱
         </ArcoButton>
       </AnimatedView>
     </PageShell>

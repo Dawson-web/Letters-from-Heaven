@@ -13,7 +13,7 @@ const HomePage = observer(() => {
   const { mailboxStore } = useRootStore();
 
   useDidShow(() => {
-    mailboxStore.refreshReplies();
+    void mailboxStore.refreshReplies();
   });
 
   return (

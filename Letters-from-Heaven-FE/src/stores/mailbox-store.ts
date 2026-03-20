@@ -1,15 +1,20 @@
 import Taro from '@tarojs/taro'
-import { makeAutoObservable } from 'mobx'
+import { makeAutoObservable, runInAction } from 'mobx'
 
-import { DEMO_REPLY_DELAY_MS, EMPTY_DRAFT } from '@/constants/relations'
+import { EMPTY_DRAFT } from '@/constants/relations'
+import {
+  clearMailbox as clearMailboxRequest,
+  createLetter as createLetterRequest,
+  fetchMailbox,
+  fetchReplyDetail,
+} from '@/services/mailbox'
+import { getErrorMessage } from '@/services/request'
 import type {
   LetterDraft,
   LetterRecord,
   PersistedMailboxState,
   ReplyRecord
 } from '@/types/mail'
-import { createId } from '@/utils/id'
-import { buildReply } from '@/utils/reply'
 
 const STORAGE_KEY = 'yunduan-huixin-mailbox'
 
@@ -19,6 +24,11 @@ export class MailboxStore {
   letters: LetterRecord[] = []
   replies: ReplyRecord[] = []
   hydrated = false
+  syncing = false
+  detailSyncing = false
+  sending = false
+  resetting = false
+  lastError = ''
 
   constructor() {
     makeAutoObservable(this, {}, { autoBind: true })
@@ -34,6 +44,10 @@ export class MailboxStore {
 
   get waitingCount() {
     return this.replies.filter((item) => item.status === 'waiting').length
+  }
+
+  get hasRemoteLetters() {
+    return this.letters.length > 0 || this.replies.length > 0
   }
 
   hydrate() {
@@ -52,11 +66,11 @@ export class MailboxStore {
       }
     } catch (error) {
       console.warn('hydrate mailbox failed', error)
-      this.resetAll()
+      this.clearLocalState()
     }
 
     this.hydrated = true
-    this.refreshReplies()
+    void this.refreshReplies()
   }
 
   persist() {
@@ -85,59 +99,121 @@ export class MailboxStore {
     this.persist()
   }
 
-  sendLetter(payload: LetterDraft) {
-    const now = Date.now()
-    const replyId = createId('reply')
-    const letterId = createId('letter')
-    const letter: LetterRecord = {
-      ...payload,
-      id: letterId,
-      createdAt: now,
-      replyId
-    }
-    const reply: ReplyRecord = {
-      id: replyId,
-      letterId,
-      status: 'waiting',
-      createdAt: now,
-      availableAt: now + DEMO_REPLY_DELAY_MS,
-      subject: `${payload.relation || '远方'}的回响`,
-      preview: '回响正在酝酿，会在一段时间后送达。',
-      body: ''
-    }
-
-    this.letters = [letter, ...this.letters]
-    this.replies = [reply, ...this.replies]
-    this.draft = { ...EMPTY_DRAFT }
-    this.persist()
-
-    return reply
+  replaceRemoteState(nextState: Pick<PersistedMailboxState, 'letters' | 'replies'>) {
+    this.letters = nextState.letters
+    this.replies = nextState.replies
   }
 
-  refreshReplies() {
-    let changed = false
+  upsertLetter(letter?: LetterRecord | null) {
+    if (!letter) {
+      return
+    }
 
-    this.replies = this.replies.map((reply) => {
-      if (reply.status !== 'waiting' || reply.availableAt > Date.now()) {
-        return reply
-      }
+    this.letters = [letter, ...this.letters.filter((item) => item.id !== letter.id)].sort(
+      (a, b) => b.createdAt - a.createdAt
+    )
+  }
 
-      const letter = this.letters.find((item) => item.id === reply.letterId)
+  upsertReply(reply?: ReplyRecord | null) {
+    if (!reply) {
+      return
+    }
 
-      if (!letter) {
-        return reply
-      }
+    this.replies = [reply, ...this.replies.filter((item) => item.id !== reply.id)].sort(
+      (a, b) => b.createdAt - a.createdAt
+    )
+  }
 
-      changed = true
-      return {
-        ...reply,
-        status: 'ready',
-        ...buildReply(letter)
-      }
-    })
+  async refreshReplies() {
+    if (!this.hydrated || this.syncing) {
+      return
+    }
 
-    if (changed) {
-      this.persist()
+    this.syncing = true
+
+    try {
+      const mailbox = await fetchMailbox()
+
+      runInAction(() => {
+        this.replaceRemoteState(mailbox)
+        this.lastError = ''
+        this.persist()
+      })
+    } catch (error) {
+      console.warn('refresh mailbox failed', error)
+
+      runInAction(() => {
+        this.lastError = getErrorMessage(error)
+      })
+    } finally {
+      runInAction(() => {
+        this.syncing = false
+      })
+    }
+  }
+
+  async sendLetter(payload: LetterDraft) {
+    if (this.sending) {
+      throw new Error('当前已有信件正在投递')
+    }
+
+    this.sending = true
+
+    try {
+      const result = await createLetterRequest(payload)
+
+      runInAction(() => {
+        this.upsertLetter(result.letter)
+        this.upsertReply(result.reply)
+        this.draft = { ...EMPTY_DRAFT }
+        this.lastError = ''
+        this.persist()
+      })
+
+      return result.reply
+    } catch (error) {
+      runInAction(() => {
+        this.lastError = getErrorMessage(error)
+      })
+
+      throw error
+    } finally {
+      runInAction(() => {
+        this.sending = false
+      })
+    }
+  }
+
+  async refreshReplyDetail(id?: string) {
+    if (!id) {
+      return undefined
+    }
+
+    this.detailSyncing = true
+
+    try {
+      const detail = await fetchReplyDetail(id)
+
+      runInAction(() => {
+        this.upsertLetter(detail.letter)
+        this.upsertReply(detail.reply)
+        this.lastError = ''
+        this.persist()
+      })
+
+      return detail.reply
+    } catch (error) {
+      console.warn('refresh reply detail failed', error)
+
+      runInAction(() => {
+        this.lastError = getErrorMessage(error)
+      })
+
+      return this.getReply(id)
+    } finally {
+      runInAction(() => {
+        this.detailSyncing = false
+      })
     }
   }
 
@@ -146,7 +222,6 @@ export class MailboxStore {
       return undefined
     }
 
-    this.refreshReplies()
     return this.replies.find((item) => item.id === id)
   }
 
@@ -158,11 +233,38 @@ export class MailboxStore {
     return this.letters.find((item) => item.id === letterId)
   }
 
-  resetAll() {
+  clearLocalState() {
     this.boundaryAccepted = false
     this.draft = { ...EMPTY_DRAFT }
     this.letters = []
     this.replies = []
+    this.lastError = ''
     Taro.removeStorageSync(STORAGE_KEY)
+  }
+
+  resetAll() {
+    return this.clearAll()
+  }
+
+  async clearAll() {
+    this.resetting = true
+
+    try {
+      await clearMailboxRequest()
+
+      runInAction(() => {
+        this.clearLocalState()
+      })
+    } catch (error) {
+      runInAction(() => {
+        this.lastError = getErrorMessage(error)
+      })
+
+      throw error
+    } finally {
+      runInAction(() => {
+        this.resetting = false
+      })
+    }
   }
 }

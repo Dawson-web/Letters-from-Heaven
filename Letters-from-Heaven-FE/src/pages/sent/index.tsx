@@ -1,11 +1,12 @@
 import { Text, View } from '@tarojs/components';
-import Taro, { useRouter } from '@tarojs/taro';
+import Taro, { useDidShow, useRouter } from '@tarojs/taro';
 import { observer } from 'mobx-react-lite';
 
 import { AnimatedView } from '@/components/animation/animated-view';
 import { LottiePlayer } from '@/components/animation/lottie-player';
 import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
+import { LoadingState } from '@/components/arco/loading-state';
 import { PageShell } from '@/components/layout/page-shell';
 import { useRootStore } from '@/stores/root-store';
 import { formatRemaining } from '@/utils/time';
@@ -14,6 +15,21 @@ const SentPage = observer(() => {
   const { params } = useRouter();
   const { mailboxStore } = useRootStore();
   const reply = mailboxStore.getReply(params.id);
+
+  useDidShow(() => {
+    void mailboxStore.refreshReplyDetail(params.id);
+  });
+
+  if (mailboxStore.detailSyncing && !reply) {
+    return (
+      <PageShell
+        title='信件已投递'
+        subtitle='正在同步这封信的状态。'
+      >
+        <LoadingState text='正在获取投递状态…' />
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell

@@ -1,4 +1,4 @@
-import { PropsWithChildren, useEffect } from 'react'
+import { PropsWithChildren } from 'react'
 import { useLaunch } from '@tarojs/taro'
 
 import { StoreProvider, useRootStore } from '@/stores/root-store'
@@ -11,10 +11,6 @@ function Bootstrap({ children }: PropsWithChildren) {
   useLaunch(() => {
     mailboxStore.hydrate()
   })
-
-  useEffect(() => {
-    mailboxStore.refreshReplies()
-  }, [mailboxStore])
 
   return children
 }

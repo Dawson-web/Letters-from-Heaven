@@ -12,6 +12,7 @@ import { ArcoTag } from '@/components/arco/tag';
 import { LetterPaper } from '@/components/arco/letter-paper';
 import { RELATION_OPTIONS } from '@/constants/relations';
 import { PageShell } from '@/components/layout/page-shell';
+import { getErrorMessage } from '@/services/request';
 import { useRootStore } from '@/stores/root-store';
 
 const WritePage = observer(() => {
@@ -52,15 +53,17 @@ const WritePage = observer(() => {
     );
   }
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!canSend || sending) {
       return;
     }
 
     setSending(true);
 
-    setTimeout(() => {
-      const reply = mailboxStore.sendLetter({
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const reply = await mailboxStore.sendLetter({
         title: title.trim(),
         body: body.trim(),
         relation,
@@ -69,7 +72,13 @@ const WritePage = observer(() => {
 
       setPendingReplyId(reply.id);
       setShowSendAnim(true);
-    }, 300);
+    } catch (error) {
+      setSending(false);
+      Taro.showToast({
+        title: getErrorMessage(error),
+        icon: 'none',
+      });
+    }
   };
 
   const handleSendAnimComplete = () => {
