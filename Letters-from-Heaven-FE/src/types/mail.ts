@@ -15,7 +15,7 @@ export type ReplySourceType = 'letter' | 'memorial'
 export interface LetterDraft {
   title: string
   body: string
-  relation: RelationOption | ''
+  relation: string
   signature: string
 }
 

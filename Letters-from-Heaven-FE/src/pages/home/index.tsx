@@ -3,10 +3,39 @@ import Taro, { useDidShow } from '@tarojs/taro';
 import { observer } from 'mobx-react-lite';
 
 import { ArcoButton } from '@/components/arco/button';
+import { ArcoCard } from '@/components/arco/card';
+import { SectionHeading } from '@/components/arco/section-heading';
 import { BoundaryConfirmSheet } from '@/components/auth/boundary-confirm-sheet';
 import { PageShell } from '@/components/layout/page-shell';
 import { useRootStore } from '@/stores/root-store';
 import { cn } from '@/utils/cn';
+
+const HOME_ENTRIES = [
+  {
+    title: '个人页面',
+    badge: '我的',
+    description: '查看信箱状态、边界提醒和整理操作。',
+    url: '/pages/profile/index',
+  },
+  {
+    title: '纪念档案',
+    badge: '档案',
+    description: '补充重要的人和纪念日，让回响更贴近记忆。',
+    url: '/pages/memorial/index',
+  },
+  {
+    title: '收件箱',
+    badge: '回响',
+    description: '查看已经到来的回应，或等等还在路上的信。',
+    url: '/pages/inbox/index',
+  },
+  {
+    title: '开始写信',
+    badge: '写信',
+    description: '把今天想说的话写下来，交给时间慢慢送达。',
+    url: '/pages/write/index',
+  },
+] as const;
 
 const HomePage = observer(() => {
   const { mailboxStore } = useRootStore();
@@ -18,35 +47,31 @@ const HomePage = observer(() => {
 
   return (
     <PageShell
-      eyebrow='云端信箱'
+      className='home-page-shell'
+      headerClassName='home-page-header'
       title='云端回信'
-      subtitle='给想念的人留一封信，让那些没来得及说完的话，也有地方轻轻落下。'
+      subtitle='把没说完的话，先放在这里。'
       hero={(
         <View className={cn('hero-poster anim-scale-in', hasEntryGate && 'opacity-50')}>
           <View className='hero-poster-copy'>
-            <Text className='hero-poster-kicker'>把想念轻轻放下</Text>
-            <Text className='hero-poster-title'>这里不是催你回答的地方，而是一座愿意慢慢等你的邮局。</Text>
-            <Text className='hero-poster-description'>
-              那些没说完的话、反复想起的片段，都会先被安静接住，再在合适的时候送回你眼前。
-            </Text>
+            <Text className='hero-poster-kicker'>慢慢来，也来得及</Text>
+            <Text className='hero-poster-title'>写给想念的人，先从一句话开始。</Text>
+            <Text className='hero-poster-description'>你现在写下的，会在合适的时候变成回响。</Text>
             <View className='hero-poster-actions'>
               <ArcoButton
                 size='lg'
                 onClick={() => Taro.navigateTo({ url: '/pages/write/index' })}
               >
-                写一封信
+                开始写信
               </ArcoButton>
               <ArcoButton
                 variant='outline'
                 size='lg'
                 onClick={() => Taro.navigateTo({ url: '/pages/inbox/index' })}
               >
-                去看看有没有回响
+                查看回响
               </ArcoButton>
             </View>
-            <Text className='hero-poster-note'>
-              如果你愿意，就先写一句最想说的话，剩下的，慢慢来。
-            </Text>
           </View>
 
           <View className='hero-poster-visual anim-gentle-sway'>
@@ -97,6 +122,27 @@ const HomePage = observer(() => {
       {!mailboxStore.boundaryAccepted ? (
         <BoundaryConfirmSheet onConfirm={mailboxStore.acceptBoundary} />
       ) : null}
+
+      <ArcoCard tone='muted' padding='lg' delay={2}>
+        <SectionHeading
+          eyebrow='快速入口'
+          title='你要去的页面，都可以从这里直接进入'
+          description='把常用页面放在首页，省去来回翻找。'
+        />
+        <View className='home-entry-grid'>
+          {HOME_ENTRIES.map((entry, index) => (
+            <View
+              key={entry.url}
+              className={cn('home-entry-card btn-press', `anim-delay-${Math.min(index + 2, 9)}`)}
+              onClick={() => Taro.navigateTo({ url: entry.url })}
+            >
+              <Text className='home-entry-badge'>{entry.badge}</Text>
+              <Text className='home-entry-title'>{entry.title}</Text>
+              <Text className='home-entry-description'>{entry.description}</Text>
+            </View>
+          ))}
+        </View>
+      </ArcoCard>
     </PageShell>
   );
 });

@@ -5,7 +5,6 @@ export default defineAppConfig({
     'pages/sent/index',
     'pages/inbox/index',
     'pages/reply/index',
-    'pages/ai-demo/index',
     'pages/profile/index',
     'pages/memorial/index',
     'pages/memorial-edit/index'

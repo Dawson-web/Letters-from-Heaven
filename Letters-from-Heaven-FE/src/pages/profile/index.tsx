@@ -81,12 +81,6 @@ const ProfilePage = observer(() => {
           description='如果你只是想收拾一下，先从草稿开始会更轻一些。'
         />
         <View className='mt-5 flex flex-col gap-3'>
-          <ArcoButton
-            variant='text'
-            onClick={() => Taro.navigateTo({ url: '/pages/ai-demo/index' })}
-          >
-            看看 AI 示例页
-          </ArcoButton>
           <ArcoButton variant='text' onClick={handleClearDraft}>
             清空当前草稿
           </ArcoButton>

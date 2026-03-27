@@ -1,4 +1,4 @@
-import { Input, Text, Textarea, View } from '@tarojs/components';
+import { Input, Picker, Text, Textarea, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useEffect, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
@@ -10,18 +10,40 @@ import { FormField } from '@/components/arco/form-field';
 import { LetterPaper } from '@/components/arco/letter-paper';
 import { ArcoNotice } from '@/components/arco/notice';
 import { SectionHeading } from '@/components/arco/section-heading';
-import { ArcoTag } from '@/components/arco/tag';
 import { AuthRequiredState } from '@/components/auth/auth-required-state';
 import { RELATION_OPTIONS } from '@/constants/relations';
 import { PageShell } from '@/components/layout/page-shell';
 import { getErrorMessage } from '@/services/request';
 import { useRootStore } from '@/stores/root-store';
 
+const CUSTOM_RELATION_STORAGE_KEY = 'yunduan-huixin-custom-relations';
+const CUSTOM_RELATION_PICKER_ACTION = '+ 添加自定义称呼';
+
+function normalizeRelationInput(value: string) {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function sanitizeCustomRelations(raw: unknown) {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const normalized = raw
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => normalizeRelationInput(item))
+    .filter((item) => item.length > 0 && item.length <= 10);
+
+  return Array.from(new Set(normalized)).slice(0, 20);
+}
+
 const WritePage = observer(() => {
   const { mailboxStore } = useRootStore();
   const [title, setTitle] = useState(mailboxStore.draft.title);
   const [body, setBody] = useState(mailboxStore.draft.body);
   const [relation, setRelation] = useState(mailboxStore.draft.relation);
+  const [customRelations, setCustomRelations] = useState<string[]>([]);
+  const [customRelationInput, setCustomRelationInput] = useState('');
+  const [showCustomRelationInput, setShowCustomRelationInput] = useState(false);
   const [signature, setSignature] = useState(mailboxStore.draft.signature);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
@@ -36,9 +58,34 @@ const WritePage = observer(() => {
     return () => clearTimeout(timer);
   }, [body, mailboxStore, relation, signature, title]);
 
+  useEffect(() => {
+    const stored = sanitizeCustomRelations(Taro.getStorageSync(CUSTOM_RELATION_STORAGE_KEY));
+    setCustomRelations(stored);
+  }, []);
+
   const canSend = useMemo(() => {
     return mailboxStore.boundaryAccepted && body.trim().length >= 8 && Boolean(relation);
   }, [body, mailboxStore.boundaryAccepted, relation]);
+
+  const relationOptions = useMemo(() => {
+    const baseOptions = RELATION_OPTIONS.filter((item) => item !== '其他');
+    const merged = [...baseOptions, ...customRelations];
+
+    if (relation && !merged.includes(relation)) {
+      merged.push(relation);
+    }
+
+    return Array.from(new Set(merged));
+  }, [customRelations, relation]);
+
+  const relationPickerOptions = useMemo(() => {
+    return [...relationOptions, CUSTOM_RELATION_PICKER_ACTION];
+  }, [relationOptions]);
+
+  const selectedRelationIndex = useMemo(() => {
+    const index = relationOptions.findIndex((item) => item === relation);
+    return index >= 0 ? index : 0;
+  }, [relation, relationOptions]);
 
   if (!mailboxStore.boundaryAccepted) {
     return (
@@ -93,6 +140,59 @@ const WritePage = observer(() => {
     });
   };
 
+  const persistCustomRelations = (nextRelations: string[]) => {
+    Taro.setStorageSync(CUSTOM_RELATION_STORAGE_KEY, nextRelations);
+  };
+
+  const handlePickRelation = (event: { detail: { value: string | number } }) => {
+    const pickIndex = Number(event.detail.value);
+    const picked = relationPickerOptions[pickIndex];
+
+    if (!picked) {
+      return;
+    }
+
+    if (picked === CUSTOM_RELATION_PICKER_ACTION) {
+      setShowCustomRelationInput(true);
+      return;
+    }
+
+    setRelation(picked);
+    setShowCustomRelationInput(false);
+    setCustomRelationInput('');
+  };
+
+  const handleAddCustomRelation = () => {
+    const nextRelation = normalizeRelationInput(customRelationInput);
+
+    if (!nextRelation) {
+      Taro.showToast({
+        title: '先输入一个称呼',
+        icon: 'none',
+      });
+      return;
+    }
+
+    if (nextRelation.length > 10) {
+      Taro.showToast({
+        title: '称呼最多 10 个字',
+        icon: 'none',
+      });
+      return;
+    }
+
+    if (!relationOptions.includes(nextRelation)) {
+      const nextCustomRelations = [...customRelations, nextRelation];
+      const deduped = Array.from(new Set(nextCustomRelations)).slice(0, 20);
+      setCustomRelations(deduped);
+      persistCustomRelations(deduped);
+    }
+
+    setRelation(nextRelation);
+    setCustomRelationInput('');
+    setShowCustomRelationInput(false);
+  };
+
   const wordCount = body.trim().length;
   const wordMin = 8;
   const remaining = Math.max(wordMin - wordCount, 0);
@@ -127,18 +227,40 @@ const WritePage = observer(() => {
         <SectionHeading
           eyebrow='写给谁'
           title='先想一想，你最想把这份想念放到谁的名字前'
-          description='这会帮助回响更贴近你心里真正想说话的方向。'
+          description='可以在下拉中选择，也可以添加一个你自己的称呼。'
         />
-        <View className='mt-5 flex flex-wrap gap-2'>
-          {RELATION_OPTIONS.map((item) => (
-            <ArcoTag
-              key={item}
-              active={relation === item}
-              onClick={() => setRelation(item)}
-            >
-              {item}
-            </ArcoTag>
-          ))}
+        <View className='relation-select-block mt-5'>
+          <Picker mode='selector' range={relationPickerOptions} value={selectedRelationIndex} onChange={handlePickRelation}>
+            <View className='relation-select-trigger btn-press'>
+              <Text className={`relation-select-value ${relation ? '' : 'text-fog'}`}>
+                {relation || '请选择一个称呼'}
+              </Text>
+              <Text className='relation-select-caret'>选择</Text>
+            </View>
+          </Picker>
+
+          <View className='relation-select-helper'>
+            <Text className='text-caption text-driftwood'>没有合适的称呼？可以自己添加一个。</Text>
+            <ArcoButton variant='text' size='sm' onClick={() => setShowCustomRelationInput((prev) => !prev)}>
+              {showCustomRelationInput ? '收起添加' : '添加称呼'}
+            </ArcoButton>
+          </View>
+
+          {showCustomRelationInput ? (
+            <View className='relation-custom-row anim-fade-in-up'>
+              <Input
+                className='field-control relation-custom-input'
+                placeholder='比如：舅舅、师父、姐姐'
+                placeholderStyle='color: #B5AB9C'
+                value={customRelationInput}
+                maxlength={10}
+                onInput={(event) => setCustomRelationInput(event.detail.value)}
+              />
+              <ArcoButton variant='outline' size='sm' onClick={handleAddCustomRelation}>
+                保存称呼
+              </ArcoButton>
+            </View>
+          ) : null}
         </View>
       </ArcoCard>
 

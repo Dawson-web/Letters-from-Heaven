@@ -114,6 +114,10 @@ function toApiError(error: unknown) {
   return new ApiError('网络请求失败，请稍后再试')
 }
 
+function getErrorText(error: unknown) {
+  return toApiError(error).message
+}
+
 async function requestByCloud<TResponse, TData>(options: RequestOptions<TData>) {
   const cloud = getCloudClient()
 
@@ -158,13 +162,36 @@ export async function apiRequest<TResponse, TData = unknown>(
   options: RequestOptions<TData>
 ) {
   let envelope: ApiEnvelope<TResponse> | null = null
+  let cloudError: unknown = null
 
   try {
-    envelope =
-      (await requestByCloud<TResponse, TData>(options)) ||
-      (await requestByHttp<TResponse, TData>(options))
+    envelope = await requestByCloud<TResponse, TData>(options)
   } catch (error) {
-    throw toApiError(error)
+    cloudError = error
+    console.warn('[apiRequest] wx.cloud.callContainer failed, falling back to HTTP', {
+      path: options.path,
+      method: options.method || 'GET',
+      cloudEnv: CLOUD_ENV,
+      cloudService: CLOUD_SERVICE,
+      error: getErrorText(error),
+    })
+  }
+
+  if (!envelope) {
+    try {
+      envelope = await requestByHttp<TResponse, TData>(options)
+    } catch (httpError) {
+      if (cloudError) {
+        console.error('[apiRequest] HTTP fallback failed after cloud request failure', {
+          path: options.path,
+          method: options.method || 'GET',
+          cloudError: getErrorText(cloudError),
+          httpError: getErrorText(httpError),
+        })
+      }
+
+      throw toApiError(httpError)
+    }
   }
 
   if (!envelope || typeof envelope !== 'object') {
