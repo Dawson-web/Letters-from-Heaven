@@ -11,7 +11,7 @@ interface LoadingStateProps {
  * 加载状态 — 三个脉冲小点
  */
 export function LoadingState({
-  text = '正在加载…',
+  text = '正在慢慢准备…',
   className,
 }: LoadingStateProps) {
   return (

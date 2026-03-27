@@ -153,7 +153,7 @@ export class MailboxStore {
 
   async sendLetter(payload: LetterDraft) {
     if (this.sending) {
-      throw new Error('当前已有信件正在投递')
+      throw new Error('这封信还在投递中，请再等一会儿')
     }
 
     this.sending = true

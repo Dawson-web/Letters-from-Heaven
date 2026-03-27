@@ -19,6 +19,7 @@ const {
   buildMemorialReadyPayload,
 } = require("./reply-builder");
 const { generateReplyBodyByAI } = require("./ai-service");
+const AI_READY_PREVIEW = "你的来信已收到，回响已生成。";
 
 function createId(prefix) {
   const random = Math.random().toString(36).slice(2, 8);
@@ -52,6 +53,15 @@ function serializeReply(reply) {
     return null;
   }
 
+  const bodyReady = typeof reply.body === "string" && reply.body.trim().length > 0;
+  const aiGenerated =
+    reply.status === REPLY_STATUS.WAITING
+      ? bodyReady
+      : reply.preview === AI_READY_PREVIEW;
+  const aiGenerationStatus = reply.status === REPLY_STATUS.WAITING
+    ? (bodyReady ? "generated_waiting_delivery" : "generating")
+    : (aiGenerated ? "delivered_ai" : "delivered_fallback");
+
   return {
     id: reply.id,
     userId: reply.userId,
@@ -61,6 +71,8 @@ function serializeReply(reply) {
     memorialEventId: reply.memorialEventId,
     sourceLetterId: reply.sourceLetterId,
     status: reply.status,
+    aiGenerated,
+    aiGenerationStatus,
     createdAt: Number(reply.createdAtMs),
     availableAt: Number(reply.availableAtMs),
     subject: reply.subject,

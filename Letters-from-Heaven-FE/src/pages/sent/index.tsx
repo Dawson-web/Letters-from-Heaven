@@ -16,6 +16,10 @@ const SentPage = observer(() => {
   const { params } = useRouter();
   const { mailboxStore } = useRootStore();
   const reply = mailboxStore.getReply(params.id);
+  const hasGeneratedBody = Boolean(reply?.body?.trim());
+  const aiGenerated = typeof reply?.aiGenerated === 'boolean'
+    ? reply.aiGenerated
+    : (reply ? (reply.status === 'ready' ? reply.preview === '你的来信已收到，回响已生成。' : hasGeneratedBody) : false);
 
   useDidShow(() => {
     void mailboxStore.refreshReplyDetail(params.id);
@@ -25,10 +29,10 @@ const SentPage = observer(() => {
     return (
       <PageShell
         eyebrow='信件已投递'
-        title='正在同步投递状态'
-        subtitle='系统正在确认这封信抵达云端后的节奏。'
+        title='正在确认这封信的去向'
+        subtitle='让系统把这封信安稳放上邮路。'
       >
-        <LoadingState text='正在获取投递状态…' />
+        <LoadingState text='正在确认这封信已经启程…' />
       </PageShell>
     );
   }
@@ -36,8 +40,10 @@ const SentPage = observer(() => {
   return (
     <PageShell
       eyebrow='信件已投递'
-      title='现在，交给时间'
-      subtitle='回响会在安静的延迟后抵达。你不需要立刻得到回应。'
+      title='接下来，交给时间慢慢带路'
+      subtitle={aiGenerated
+        ? '回响已经写好，只是在等那个适合你打开它的时刻。'
+        : '这封信已经寄出，你不用守着它，回响会在合适的时候回来。'}
       footer={(
         <View className='sticky-cta-stack'>
           <ArcoButton
@@ -45,23 +51,25 @@ const SentPage = observer(() => {
             size='lg'
             onClick={() => Taro.redirectTo({ url: '/pages/inbox/index' })}
           >
-            去收件箱等待
+            去收件箱等等它
           </ArcoButton>
           <ArcoButton
             variant='text'
             onClick={() => Taro.redirectTo({ url: '/pages/write/index' })}
           >
-            再写一封
+            再写一封信
           </ArcoButton>
         </View>
       )}
     >
       <View className='hero-poster anim-scale-in'>
         <View className='hero-poster-copy'>
-          <Text className='hero-poster-kicker'>投递完成</Text>
-          <Text className='hero-poster-title'>这封信已经离开你的手边。</Text>
+          <Text className='hero-poster-kicker'>已经寄出</Text>
+          <Text className='hero-poster-title'>这封信已经轻轻离开你手边。</Text>
           <Text className='hero-poster-description'>
-            接下来只剩等待。让它像一封真实书信一样，经过一点路程再回来。
+            {aiGenerated
+              ? '回响已经写好，接下来只把“送达”这段路安静留给时间。'
+              : '接下来的事，不必催促。让它像一封真正的来信一样，走一点路，再回来。'}
           </Text>
         </View>
 
@@ -82,13 +90,17 @@ const SentPage = observer(() => {
         <SectionHeading
           eyebrow='预计抵达'
           title={reply ? formatRemaining(reply.availableAt) : '请稍后去收件箱查看'}
-          description='体验版默认采用 90 秒延迟，正式版可以切换成清明、生日、周年等更有仪式感的送达时间。'
+          description={aiGenerated
+            ? '回响已经写好，现在只等它按约定的时间来到。'
+            : '系统正在顺着你的来信慢慢写回这封回应。'}
         />
       </ArcoCard>
 
       <ArcoNotice
-        title='你现在可以离开一会儿'
-        description='最好的体验通常不是守着倒计时，而是让这段等待自然发生。'
+        title={aiGenerated ? '回响已经写好，等它自然来到' : '现在可以先去做点别的'}
+        description={aiGenerated
+          ? '最好的打开方式通常不是提前惦记它，而是等它自己按时来到。'
+          : '最合适的等待，往往不是盯着倒计时，而是把这一小段时间还给自己。'}
       />
     </PageShell>
   );

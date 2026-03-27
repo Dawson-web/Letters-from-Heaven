@@ -86,11 +86,11 @@ export function EnvelopeOpen({ subject, relation, onComplete }: EnvelopeOpenProp
             </View>
           </View>
 
-          <Text className='mail-scene-title'>{subject || '一封来自远方的回响'}</Text>
+          <Text className='mail-scene-title'>{subject || '一封慢慢来到你面前的回响'}</Text>
           {relation ? (
-            <Text className='mail-scene-copy'>来自{relation}的方向，正等你亲手拆封。</Text>
+            <Text className='mail-scene-copy'>它沿着写给{relation}的方向来了，正安静等你把它拆开。</Text>
           ) : (
-            <Text className='mail-scene-copy'>像真正的来信一样，轻触拆封，再慢慢展开。</Text>
+            <Text className='mail-scene-copy'>像拆一封真正的来信一样，轻轻打开，再慢慢读它。</Text>
           )}
 
           <View className='divider-dots mt-6'>
@@ -101,7 +101,7 @@ export function EnvelopeOpen({ subject, relation, onComplete }: EnvelopeOpenProp
 
           <View className='mt-2'>
             <ArcoButton variant='outline' size='sm' onClick={handleTap}>
-              轻触拆封
+              轻轻拆封
             </ArcoButton>
           </View>
         </View>
@@ -114,7 +114,7 @@ export function EnvelopeOpen({ subject, relation, onComplete }: EnvelopeOpenProp
 
               <View className='mail-unseal-letter-wrap'>
                 <View className='mail-unseal-letter'>
-                  <Text className='mail-unseal-letter-title'>{subject || '这封回响正在展开'}</Text>
+                  <Text className='mail-unseal-letter-title'>{subject || '这封回响正慢慢展开'}</Text>
                   <View className='mail-unseal-letter-divider' />
                   <View className='mail-unseal-letter-line mail-unseal-letter-line--long' />
                   <View className='mail-unseal-letter-line mail-unseal-letter-line--long' />
@@ -129,8 +129,8 @@ export function EnvelopeOpen({ subject, relation, onComplete }: EnvelopeOpenProp
             </View>
           </View>
 
-          <Text className='mail-scene-title'>正在拆封并展开这封回响</Text>
-          <Text className='mail-scene-copy'>信纸会先被抽出，再慢慢铺开到你面前。</Text>
+          <Text className='mail-scene-title'>这封回响正在慢慢展开</Text>
+          <Text className='mail-scene-copy'>信纸会先被抽出来，再把想说的话一点点铺开到你面前。</Text>
         </View>
       )}
     </View>

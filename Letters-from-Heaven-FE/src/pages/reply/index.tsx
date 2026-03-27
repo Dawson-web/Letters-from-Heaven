@@ -49,10 +49,10 @@ const ReplyPage = observer(() => {
     return (
       <PageShell
         eyebrow='回响详情'
-        title='正在寻找这封回响'
-        subtitle='系统正在同步最新状态。'
+        title='正在把这封回响找给你'
+        subtitle='它可能刚刚抵达，再等一会儿。'
       >
-        <LoadingState text='正在同步回响…' />
+        <LoadingState text='正在把这封回响轻轻展开…' />
       </PageShell>
     );
   }
@@ -61,12 +61,12 @@ const ReplyPage = observer(() => {
     return (
       <PageShell
         eyebrow='回响详情'
-        title='没有找到这封回响'
-        subtitle='它可能还没有生成，或者你刚好在系统同步前打开了这里。'
+        title='这封回响暂时还没到这里'
+        subtitle='也许它还在路上，或者刚好比你慢了一小步。'
       >
         <ArcoEmpty
-          title='这封回响暂时还不在这里'
-          description='可以回到收件箱刷新，或者重新写一封新的信。'
+          title='先别着急，它可能还在路上'
+          description='你可以回到收件箱再看看，或者先去写下另一封想说的话。'
           actionText='返回收件箱'
           onAction={() => Taro.redirectTo({ url: '/pages/inbox/index' })}
         />
@@ -74,22 +74,32 @@ const ReplyPage = observer(() => {
     );
   }
 
+  const hasGeneratedBody = reply.body.trim().length > 0;
+  const aiGenerated = typeof reply.aiGenerated === 'boolean'
+    ? reply.aiGenerated
+    : (reply.status === 'ready'
+      ? reply.preview === '你的来信已收到，回响已生成。'
+      : hasGeneratedBody);
+  const replyBody = reply.body.trim() || '这封回响还在整理最后一点字句，稍后再来看看。';
+
   if (reply.status === 'waiting') {
     return (
       <PageShell
-        eyebrow='仍在路上'
-        title='回响仍在酝酿'
-        subtitle='延迟本身也是这份体验的一部分，它会在更合适的时刻抵达。'
+        eyebrow='它还在路上'
+        title={aiGenerated ? '回响已经写好，正在等它来到你面前' : '这封回响还在慢慢酝酿'}
+        subtitle={aiGenerated
+          ? '回响已经写好，只是还在等那个适合你打开它的时刻。'
+          : '系统正顺着你的来信慢慢写回这封回应，时间差也会替它留住一点书信感。'}
         footer={(
           <View className='sticky-cta-stack'>
             <ArcoButton className='w-full' size='lg' onClick={() => void mailboxStore.refreshReplyDetail(reply.id)}>
-              刷新状态
+              再看看现在到了没有
             </ArcoButton>
             <ArcoButton
               variant='text'
               onClick={() => Taro.redirectTo({ url: '/pages/inbox/index' })}
             >
-              返回收件箱
+              先回收件箱
             </ArcoButton>
           </View>
         )}
@@ -99,7 +109,7 @@ const ReplyPage = observer(() => {
             <View className='flex-1'>
               <View className='status-inline'>
                 <View className='dot-waiting' />
-                <Text className='text-overline text-driftwood'>酝酿中</Text>
+                <Text className='text-overline text-driftwood'>{aiGenerated ? '已写好，等它到来' : '正在写回'}</Text>
               </View>
               <Text className='mt-3 block text-heading text-charcoal'>{reply.subject}</Text>
             </View>
@@ -107,7 +117,9 @@ const ReplyPage = observer(() => {
           </View>
 
           <Text className='mt-5 block text-body text-charcoal'>
-            这封回响还在安静酝酿，预计 {formatRemaining(reply.availableAt)}。
+            {aiGenerated
+              ? `这封回响已经写好，大约会在 ${formatRemaining(reply.availableAt)} 后来到你面前。`
+              : `这封回响还在慢慢写成，预计 ${formatRemaining(reply.availableAt)}。`}
           </Text>
 
           <View className='mt-5 flex flex-col gap-2'>
@@ -119,8 +131,10 @@ const ReplyPage = observer(() => {
         </ArcoCard>
 
         <ArcoNotice
-          title='等待不是空白'
-          description='系统会保留这段时间差，让“回响”更像一封真正经历了路途的信。'
+          title='等待也算一种回音'
+          description={aiGenerated
+            ? '回信已经写好，但会继续保留送达延迟，让你打开它的时候，仍然像收到一封真正走过路程的信。'
+            : '系统会先完成 AI 生成，再把这段时间差留住，让“回响”更像一封真正经历了路途的信。'}
         />
       </PageShell>
     );
@@ -141,12 +155,15 @@ const ReplyPage = observer(() => {
 
   return (
     <PageShell
-      eyebrow='一封已经抵达的回响'
+      eyebrow='一封已经来到你面前的回响'
       title={reply.subject}
-      subtitle='这封回响由系统生成，用来承接思念，不代表逝者真实意志。'
+      subtitle={aiGenerated
+        ? '这封回响由 AI 顺着你的来信写回，用来陪你安放思念，不代表逝者真实意志。'
+        : '这封回响由系统模板承接你的来信，用来陪你安放思念，不代表逝者真实意志。'}
       meta={(
         <View className='flex flex-wrap gap-2'>
           <View className='meta-chip'>{formatDateTime(reply.createdAt)}</View>
+          <View className='meta-chip'>{aiGenerated ? 'AI 写回' : '系统模板'}</View>
           {reply.sourceType === 'memorial' ? (
             <View className='meta-chip'>{getMemorialLabel(reply.memorialEventId)}</View>
           ) : null}
@@ -165,20 +182,20 @@ const ReplyPage = observer(() => {
             variant='text'
             onClick={() => Taro.redirectTo({ url: '/pages/write/index' })}
           >
-            再写一封
+            再写一封信
           </ArcoButton>
         </View>
       )}
     >
       <ArcoCard tone='muted' padding='lg' delay={1}>
         <SectionHeading
-          eyebrow='原信信息'
-          title='这封回响从这里开始'
-          description='先确认这封信写给谁、写于什么时候，再慢慢打开正文。'
+          eyebrow='原信落款'
+          title='它是从你写下的那一刻开始回来的'
+          description='先看看时间、称呼和来处，再慢慢读完这封信。'
         />
 
         <View className='mt-5 flex flex-col gap-2'>
-          <Text className='text-body text-charcoal'>原信时间：{formatDateTime(reply.createdAt)}</Text>
+          <Text className='text-body text-charcoal'>写下时间：{formatDateTime(reply.createdAt)}</Text>
           {letter?.title ? <Text className='text-body text-charcoal'>原信标题：{letter.title}</Text> : null}
           {letter?.relation ? <Text className='text-body text-charcoal'>写给：{letter.relation}</Text> : null}
         </View>
@@ -186,7 +203,7 @@ const ReplyPage = observer(() => {
 
       <LetterPaper variant='hero' className='letter-paper--reply anim-letter-reveal'>
         <View className='reply-letter-flow'>
-          {reply.body.split('\n\n').map((paragraph, index) => (
+          {replyBody.split('\n\n').map((paragraph, index) => (
             <View
               key={`${paragraph.slice(0, 20)}-${index}`}
               className={`reply-paragraph-block anim-fade-in-up anim-read-delay-${Math.min(index + 1, 10)}`}
@@ -199,8 +216,8 @@ const ReplyPage = observer(() => {
 
       <ArcoNotice
         tone='warning'
-        title='边界提醒'
-        description='这封回响用于承接你的思念，而不是还原真实的关系或逝者本人的态度。'
+        title='也请轻轻记得这条边界'
+        description='这封回响是在陪你安放思念，不是在替任何人给出真实回答。'
       />
     </PageShell>
   );

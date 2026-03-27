@@ -33,6 +33,8 @@ export interface ReplyRecord {
   memorialEventId?: string | null
   sourceLetterId?: string | null
   status: ReplyStatus
+  aiGenerated?: boolean
+  aiGenerationStatus?: 'generating' | 'generated_waiting_delivery' | 'delivered_ai' | 'delivered_fallback'
   createdAt: number
   availableAt: number
   subject: string

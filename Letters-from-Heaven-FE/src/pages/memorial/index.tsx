@@ -19,8 +19,8 @@ const MemorialPage = observer(() => {
   return (
     <PageShell
       eyebrow='纪念档案'
-      title='把重要的人留在清晰的记忆里'
-      subtitle='档案不是资料堆砌，而是为了让后续的回响能更贴近你真实记得的那个人。'
+      title='把重要的人，安放进清楚又温柔的记忆里'
+      subtitle='档案不是为了把回忆整理得完整，而是让后来每一次回响，都更靠近你真正记得的样子。'
       footer={(
         <View className='sticky-cta-stack'>
           <ArcoButton
@@ -28,27 +28,27 @@ const MemorialPage = observer(() => {
             size='lg'
             onClick={() => Taro.navigateTo({ url: '/pages/memorial-edit/index' })}
           >
-            新建纪念档案
+            新建一份纪念档案
           </ArcoButton>
           <Text className='text-center text-caption text-driftwood'>
-            先从一个称呼、一组关键词和一个纪念日开始就够了。
+            先写下一个称呼、一点线索和一个值得记住的日子，就已经很好。
           </Text>
         </View>
       )}
     >
       <ArcoCard tone='emphasis' padding='lg' delay={1}>
         <SectionHeading
-          eyebrow='为什么要建档'
-          title='让后续的纪念回响有更清晰的来处'
-          description='档案会把关系、记忆线索和纪念日收拢成一条时间线，而不是散落在每封信里。'
+          eyebrow='为什么留档'
+          title='让想念有一条可以慢慢回望的线索'
+          description='把称呼、记忆和纪念日放在一起，后来的回响才会更像从熟悉之处长出来。'
         />
       </ArcoCard>
 
       {memorialStore.profiles.length === 0 ? (
         <ArcoEmpty
-          title='还没有纪念档案'
-          description='建立档案后，清明和纪念日的回响会更像是从熟悉的记忆里长出来。'
-          actionText='创建档案'
+          title='这里还没有纪念档案'
+          description='等你愿意写下第一个名字和纪念日，这里就会慢慢有温度。'
+          actionText='新建档案'
           onAction={() => Taro.navigateTo({ url: '/pages/memorial-edit/index' })}
         />
       ) : (
@@ -68,7 +68,7 @@ const MemorialPage = observer(() => {
                   {profile.displayName || profile.relation}
                 </Text>
                 <Text className='mt-2 block text-caption text-driftwood'>
-                  {profile.displayName ? `关系：${profile.relation}` : '还没有填写具体称呼'}
+                  {profile.displayName ? `关系：${profile.relation}` : '还没写下更具体的称呼'}
                 </Text>
               </View>
               <View className='meta-chip'>{profile.relation}</View>
@@ -76,10 +76,10 @@ const MemorialPage = observer(() => {
 
             <View className='mt-4 flex flex-col gap-2'>
               <Text className='text-body text-charcoal'>
-                关键词：{profile.keywords || '尚未填写'}
+                记忆线索：{profile.keywords || '还没写下'}
               </Text>
               {profile.note ? (
-                <Text className='line-clamp-2 text-caption text-driftwood'>备注：{profile.note}</Text>
+                <Text className='line-clamp-2 text-caption text-driftwood'>补充记忆：{profile.note}</Text>
               ) : null}
               <Text className='text-caption text-driftwood'>时区：{profile.timezone}</Text>
             </View>
@@ -87,7 +87,7 @@ const MemorialPage = observer(() => {
             <View className='divider-fade my-4' />
 
             <Text className='text-caption font-medium text-stone'>
-              纪念日 {memorialStore.eventsByProfile[profile.id]?.length || 0} 项，点击继续编辑
+              已留下 {memorialStore.eventsByProfile[profile.id]?.length || 0} 个纪念日，点开可以继续慢慢补充
             </Text>
           </ArcoCard>
         ))

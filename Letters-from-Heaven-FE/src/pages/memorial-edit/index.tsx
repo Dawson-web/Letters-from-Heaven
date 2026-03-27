@@ -94,10 +94,10 @@ const MemorialEditPage = observer(() => {
 
       if (profileId) {
         await memorialStore.updateProfile(profileId, payload);
-        Taro.showToast({ title: '已保存', icon: 'none' });
+        Taro.showToast({ title: '这份档案已经存好了', icon: 'none' });
       } else {
         const created = await memorialStore.createProfile(payload);
-        Taro.showToast({ title: '已创建', icon: 'none' });
+        Taro.showToast({ title: '这份档案已经收好了', icon: 'none' });
         Taro.redirectTo({ url: `/pages/memorial-edit/index?id=${created.id}` });
       }
     } catch (error) {
@@ -113,8 +113,8 @@ const MemorialEditPage = observer(() => {
     }
 
     const result = await Taro.showModal({
-      title: '删除纪念档案',
-      content: '删除后无法恢复，但不会影响已有回响。',
+      title: '要删除这份纪念档案吗',
+      content: '删除后不能恢复，但已经收到的回响不会受影响。',
     });
 
     if (!result.confirm) {
@@ -123,7 +123,7 @@ const MemorialEditPage = observer(() => {
 
     try {
       await memorialStore.deleteProfile(profileId);
-      Taro.showToast({ title: '已删除', icon: 'none' });
+      Taro.showToast({ title: '这份档案已经删除', icon: 'none' });
       Taro.redirectTo({ url: '/pages/memorial/index' });
     } catch (error) {
       Taro.showToast({ title: getErrorMessage(error), icon: 'none' });
@@ -132,7 +132,7 @@ const MemorialEditPage = observer(() => {
 
   const handleSaveEvent = async () => {
     if (!profileId) {
-      Taro.showToast({ title: '请先保存档案', icon: 'none' });
+      Taro.showToast({ title: '先把这份档案存下来，再继续添加纪念日', icon: 'none' });
       return;
     }
 
@@ -150,10 +150,10 @@ const MemorialEditPage = observer(() => {
 
       if (editingEventId) {
         await memorialStore.updateEvent(editingEventId, payload);
-        Taro.showToast({ title: '纪念日已更新', icon: 'none' });
+        Taro.showToast({ title: '这个纪念日已经更新好了', icon: 'none' });
       } else {
         await memorialStore.createEvent(profileId, payload);
-        Taro.showToast({ title: '纪念日已添加', icon: 'none' });
+        Taro.showToast({ title: '这个纪念日已经放进时间线了', icon: 'none' });
       }
 
       resetEventForm();
@@ -178,8 +178,8 @@ const MemorialEditPage = observer(() => {
 
   const handleDeleteEvent = async (eventId: string) => {
     const result = await Taro.showModal({
-      title: '删除纪念日',
-      content: '删除后无法恢复。',
+      title: '要删除这个纪念日吗',
+      content: '删除后不能恢复。',
     });
 
     if (!result.confirm) {
@@ -188,7 +188,7 @@ const MemorialEditPage = observer(() => {
 
     try {
       await memorialStore.deleteEvent(eventId);
-      Taro.showToast({ title: '已删除', icon: 'none' });
+      Taro.showToast({ title: '这个纪念日已经删除', icon: 'none' });
     } catch (error) {
       Taro.showToast({ title: getErrorMessage(error), icon: 'none' });
     }
@@ -197,16 +197,16 @@ const MemorialEditPage = observer(() => {
   return (
     <PageShell
       eyebrow='纪念档案'
-      title={profileId ? '编辑这份记忆' : '建立一份新的档案'}
-      subtitle='档案越完整，后续的纪念回响就越贴近你真的记得的那个人。'
+      title={profileId ? '把这份记忆再整理一下' : '为想念留一份新的档案'}
+      subtitle='你不需要一次写得很完整，只要把最想留下的线索轻轻放进来。'
       footer={(
         <View className='sticky-cta-stack'>
           <ArcoButton className='w-full' size='lg' disabled={!canSave} loading={saving} onClick={handleSaveProfile}>
-            {profileId ? '保存档案' : '创建档案'}
+            {profileId ? '先把这份档案存好' : '把这份档案存好'}
           </ArcoButton>
           {profileId ? (
             <ArcoButton variant='text' onClick={handleDeleteProfile}>
-              删除档案
+              删除这份档案
             </ArcoButton>
           ) : null}
         </View>
@@ -215,8 +215,8 @@ const MemorialEditPage = observer(() => {
       <ArcoCard tone='emphasis' padding='lg' delay={1}>
         <SectionHeading
           eyebrow='关联关系'
-          title='先确定你们之间最准确的称呼'
-          description='关系会影响纪念回响的称呼方式和整体语气。'
+          title='先想一想，你最自然会怎样称呼他或她'
+          description='这个称呼会帮助之后的回响更贴近你心里真正的关系。'
         />
         <View className='mt-5 flex flex-wrap gap-2'>
           {RELATION_OPTIONS.map((item) => (
@@ -234,14 +234,14 @@ const MemorialEditPage = observer(() => {
       <ArcoCard tone='default' padding='lg' delay={2}>
         <SectionHeading
           eyebrow='纪念对象'
-          title='用少量但明确的线索勾出这个人'
-          description='不要追求资料齐全，优先留下称呼、关键词和你真正记得住的细节。'
+          title='先用几条最舍不得忘记的线索，把这个人留住'
+          description='不用写得齐全，留下你最熟悉的称呼、习惯和片段就够了。'
         />
 
         <View className='mt-6 flex flex-col gap-6'>
           <FormField
-            label='称呼或名字'
-            hint='可选。用于让回响和页面内容更像你真的会使用的称呼。'
+            label='你会怎么叫他或她'
+            hint='可选。写下你心里最自然的称呼，回响也会更贴近这份亲近。'
           >
             <Input
               className='field-control'
@@ -254,12 +254,12 @@ const MemorialEditPage = observer(() => {
           </FormField>
 
           <FormField
-            label='关键词'
-            hint='写 2 到 5 个记忆线索，例如秋天、厨房、港口、旧收音机。'
+            label='记忆线索'
+            hint='写下 2 到 5 个你一看到就会想起他或她的词。'
           >
             <Input
               className='field-control'
-              placeholder='关键词（如：秋天、厨房、港口）'
+              placeholder='比如：秋天、厨房、港口'
               placeholderStyle='color: #B5AB9C'
               value={keywords}
               maxlength={128}
@@ -268,12 +268,12 @@ const MemorialEditPage = observer(() => {
           </FormField>
 
           <FormField
-            label='补充备注'
-            hint='可选。适合写一段更完整的记忆、口头禅或你想保留下来的语气。'
+            label='还想补充些什么'
+            hint='可选。可以写一句口头禅、一段小事，或一种你忘不掉的语气。'
           >
             <Input
               className='field-control'
-              placeholder='备注或想补充的线索'
+              placeholder='还想留下的一点记忆'
               placeholderStyle='color: #B5AB9C'
               value={note}
               maxlength={400}
@@ -283,7 +283,7 @@ const MemorialEditPage = observer(() => {
 
           <FormField
             label='时区'
-            hint='决定纪念日回响在哪个时区触发。默认使用 Asia/Shanghai。'
+            hint='回响会按这个时区的时间慢慢抵达，默认是 Asia/Shanghai。'
           >
             <Input
               className='field-control'
@@ -299,19 +299,19 @@ const MemorialEditPage = observer(() => {
 
       <ArcoNotice
         tone='warning'
-        title='体验边界'
-        description='纪念回响由系统生成，用于承接思念，不代表逝者真实态度，也不构成真实还原。'
+        title='也请记得这条边界'
+        description='纪念回响由系统生成，用来陪你安放思念，不代表逝者真实态度，也不能替代真实的人。'
       />
 
       <ArcoCard tone='muted' padding='lg' delay={3}>
         <SectionHeading
           eyebrow='纪念日设置'
-          title='把值得被记住的日期安排进时间线'
-          description='每个纪念日每年只会触发一次回响，可以设置前后浮动窗口和送达时点。'
+          title='把想见的日子，轻轻放进时间里'
+          description='每个纪念日每年只会来一次回响，你可以决定它在前后几天、什么时刻来到。'
         />
 
         {events.length === 0 ? (
-          <Text className='mt-5 block text-body text-driftwood'>还没有设置纪念日。</Text>
+          <Text className='mt-5 block text-body text-driftwood'>还没把任何纪念日放进来。</Text>
         ) : (
           <View className='mt-5 flex flex-col gap-4'>
             {events.map((event) => (
@@ -328,18 +328,18 @@ const MemorialEditPage = observer(() => {
                         : event.label || '自定义'}
                     </Text>
                     <Text className='mt-2 block text-caption text-driftwood'>
-                      {event.month}月{event.day}日 · 窗口 {event.windowStartDays} ~ {event.windowEndDays} 天 · {event.deliverAtHour} 点
+                      {event.month}月{event.day}日 · 前后窗口 {event.windowStartDays} ~ {event.windowEndDays} 天 · {event.deliverAtHour} 点送达
                     </Text>
                   </View>
-                  <View className='meta-chip'>{event.enabled ? '启用中' : '已停用'}</View>
+                  <View className='meta-chip'>{event.enabled ? '正在启用' : '暂时停用'}</View>
                 </View>
 
                 <View className='mt-4 flex flex-wrap gap-3'>
                   <ArcoButton variant='text' onClick={() => handleEditEvent(event)}>
-                    编辑纪念日
+                    调整这个纪念日
                   </ArcoButton>
                   <ArcoButton variant='text' className='text-terracotta' onClick={() => handleDeleteEvent(event.id)}>
-                    删除纪念日
+                    删除这个纪念日
                   </ArcoButton>
                 </View>
               </ArcoCard>
@@ -350,9 +350,9 @@ const MemorialEditPage = observer(() => {
 
       <ArcoCard tone='emphasis' padding='lg' delay={4}>
         <SectionHeading
-          eyebrow={editingEventId ? '编辑纪念日' : '新增纪念日'}
-          title={editingEventId ? '调整这一个日期的触发方式' : '为这份档案添加一个新的纪念节点'}
-          description='先选类型，再设置日期与触发窗口。清明默认固定在 4 月 4 日。'
+          eyebrow={editingEventId ? '调整纪念日' : '添加纪念日'}
+          title={editingEventId ? '把这一天调到更适合你的节奏' : '为这份想念添一个会再回来的一天'}
+          description='先选类型，再慢慢设定日期和触发窗口。清明会默认落在 4 月 4 日。'
         />
 
         <View className='mt-5 flex flex-wrap gap-2'>
@@ -377,12 +377,12 @@ const MemorialEditPage = observer(() => {
         <View className='mt-6 flex flex-col gap-6'>
           <FormField
             label='日期与标签'
-            hint='自定义纪念日可以额外填写标签，例如第一次搬家、毕业、见面的城市。'
+            hint='如果是自定义纪念日，可以写下这个日子在你心里的名字。'
           >
             <View className='field-row field-row--triple'>
               <Input
                 className='field-control'
-                placeholder='月'
+                placeholder='月份'
                 placeholderStyle='color: #B5AB9C'
                 value={String(eventForm.month)}
                 type='number'
@@ -396,7 +396,7 @@ const MemorialEditPage = observer(() => {
               />
               <Input
                 className='field-control'
-                placeholder='日'
+                placeholder='日期'
                 placeholderStyle='color: #B5AB9C'
                 value={String(eventForm.day)}
                 type='number'
@@ -410,7 +410,7 @@ const MemorialEditPage = observer(() => {
               />
               <Input
                 className='field-control'
-                placeholder='标签（可选）'
+                placeholder='这个日子的名字（可选）'
                 placeholderStyle='color: #B5AB9C'
                 value={eventForm.label}
                 maxlength={32}
@@ -426,12 +426,12 @@ const MemorialEditPage = observer(() => {
 
           <FormField
             label='触发窗口'
-            hint='例如开始 -1、结束 1，代表纪念日前后 1 天内都可能触发。'
+            hint='例如开始 -1、结束 1，代表它会在前后 1 天里挑一个更合适的时刻来到。'
           >
             <View className='field-row field-row--triple'>
               <Input
                 className='field-control'
-                placeholder='开始天数'
+                placeholder='开始前几天'
                 placeholderStyle='color: #B5AB9C'
                 value={String(eventForm.windowStartDays)}
                 type='number'
@@ -444,7 +444,7 @@ const MemorialEditPage = observer(() => {
               />
               <Input
                 className='field-control'
-                placeholder='结束天数'
+                placeholder='结束后几天'
                 placeholderStyle='color: #B5AB9C'
                 value={String(eventForm.windowEndDays)}
                 type='number'
@@ -457,7 +457,7 @@ const MemorialEditPage = observer(() => {
               />
               <Input
                 className='field-control'
-                placeholder='送达时点'
+                placeholder='送达小时'
                 placeholderStyle='color: #B5AB9C'
                 value={String(eventForm.deliverAtHour)}
                 type='number'
@@ -482,16 +482,16 @@ const MemorialEditPage = observer(() => {
               }))
             }
           >
-            {eventForm.enabled ? '当前：已启用' : '当前：已停用'}
+            {eventForm.enabled ? '当前：会送达' : '当前：暂不送达'}
           </ArcoButton>
           <ArcoButton variant='text' onClick={resetEventForm}>
-            取消编辑
+            先不改这个了
           </ArcoButton>
         </View>
 
         <View className='mt-6'>
           <ArcoButton onClick={handleSaveEvent}>
-            {editingEventId ? '保存纪念日' : '添加纪念日'}
+            {editingEventId ? '存好这个纪念日' : '把这个纪念日放进来'}
           </ArcoButton>
         </View>
       </ArcoCard>

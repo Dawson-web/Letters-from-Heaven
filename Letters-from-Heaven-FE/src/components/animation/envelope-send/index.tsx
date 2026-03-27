@@ -66,10 +66,10 @@ export function EnvelopeSend({ relation, onComplete }: EnvelopeSendProps) {
         </View>
 
         <Text className='mail-scene-title'>
-          {relation ? `白鸽已衔起写给${relation}的信` : '白鸽已衔起这封信'}
+          {relation ? `写给${relation}的这封信，已经启程了` : '这封信，已经启程了'}
         </Text>
         <Text className='mail-scene-copy'>
-          它会沿着这段安静邮路飞远，等回响抵达时，再把思念重新送回你手里。
+          它会沿着这条安静的邮路慢慢远去，等回响准备好，再轻轻回到你面前。
         </Text>
       </View>
     </View>

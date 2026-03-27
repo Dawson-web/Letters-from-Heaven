@@ -20,14 +20,14 @@ const HomePage = observer(() => {
     <PageShell
       eyebrow='云端信箱'
       title='云端回信'
-      subtitle='给想念的人留一封信，让回响隔着时间慢慢抵达。'
+      subtitle='给想念的人留一封信，让那些没来得及说完的话，也有地方轻轻落下。'
       hero={(
         <View className={cn('hero-poster anim-scale-in', hasEntryGate && 'opacity-50')}>
           <View className='hero-poster-copy'>
-            <Text className='hero-poster-kicker'>把想念交给时间</Text>
-            <Text className='hero-poster-title'>这不是对话框，而是一座安静的邮局。</Text>
+            <Text className='hero-poster-kicker'>把想念轻轻放下</Text>
+            <Text className='hero-poster-title'>这里不是催你回答的地方，而是一座愿意慢慢等你的邮局。</Text>
             <Text className='hero-poster-description'>
-              它只接住那些没说完的话，并在一段克制的延迟后送回一封温柔回响。
+              那些没说完的话、反复想起的片段，都会先被安静接住，再在合适的时候送回你眼前。
             </Text>
             <View className='hero-poster-actions'>
               <ArcoButton
@@ -41,11 +41,11 @@ const HomePage = observer(() => {
                 size='lg'
                 onClick={() => Taro.navigateTo({ url: '/pages/inbox/index' })}
               >
-                去收件箱看看
+                去看看有没有回响
               </ArcoButton>
             </View>
             <Text className='hero-poster-note'>
-              你可以先写一句最想说的话，再把这份停顿感交给时间保管。
+              如果你愿意，就先写一句最想说的话，剩下的，慢慢来。
             </Text>
           </View>
 

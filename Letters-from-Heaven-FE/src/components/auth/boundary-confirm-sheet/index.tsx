@@ -15,21 +15,21 @@ export function BoundaryConfirmSheet({ onConfirm }: BoundaryConfirmSheetProps) {
       <AnimatedView animation='fade-in-up' className='boundary-confirm-sheet'>
         <View className='boundary-confirm-handle' />
 
-        <Text className='boundary-confirm-eyebrow'>使用前说明</Text>
-        <Text className='boundary-confirm-title'>这是一座安静的信箱，不是真人重现</Text>
+        <Text className='boundary-confirm-eyebrow'>开始之前</Text>
+        <Text className='boundary-confirm-title'>这里会接住想念，但不会替代真实的人</Text>
         <Text className='boundary-confirm-copy'>
-          回信由 AI 生成，只用于情绪承接与纪念表达，不代表逝者真实态度，也不还原真实关系。
+          这里的回响由 AI 生成，用来陪你把思念安放下来，不代表逝者真实态度，也不能还原真实关系。
         </Text>
         <Text className='boundary-confirm-copy'>
-          体验版回响会在约 90 秒后送达。正式版可以切换到纪念日、生日等更有节奏感的送达方式。
+          体验版的回响大约会在 90 秒后抵达。之后也可以按纪念日、生日这些更从容的节奏送达。
         </Text>
         <Text className='boundary-confirm-note'>
-          如果你正处在强烈哀伤或危机场景中，它不应成为唯一支持渠道。
+          如果你正处在强烈哀伤或危机场景里，也请把真实的人和支持渠道放在更前面。
         </Text>
 
         <View className='mt-6'>
           <ArcoButton className='boundary-confirm-button' onClick={onConfirm}>
-            我已知晓，开始体验
+            我知道了，轻轻开始
           </ArcoButton>
         </View>
       </AnimatedView>

@@ -42,7 +42,7 @@ const InboxPage = observer(() => {
     <PageShell
       eyebrow='等待打开的那一刻'
       title='收件箱'
-      subtitle='这里不会瞬时刷新情绪，它只在你愿意打开的时候给出回应。'
+      subtitle='这里收着已经到来的，也收着还在路上的回应。'
       meta={(
         <View className='page-shell-actions'>
           <ArcoButton
@@ -57,10 +57,10 @@ const InboxPage = observer(() => {
       <ArcoCard tone='emphasis' padding='lg' delay={1} className='inbox-status-hero-card'>
         <View className='inbox-status-hero'>
           <View className='inbox-status-copy'>
-            <Text className='inbox-status-eyebrow'>当前状态</Text>
-            <Text className='inbox-status-title'>信箱里的回响正在积累</Text>
+            <Text className='inbox-status-eyebrow'>此刻的信箱</Text>
+            <Text className='inbox-status-title'>有些回响已经到了，有些还在慢慢靠近</Text>
             <Text className='inbox-status-description'>
-              收件箱只呈现此刻最值得打开的来信，让等待、送达与打开发生在同一张安静邮路上。
+              你不需要急着把它们全部打开。先看看哪一封，正好适合今天的你。
             </Text>
           </View>
 
@@ -105,19 +105,19 @@ const InboxPage = observer(() => {
             <View className='inbox-status-meter inbox-status-meter--ready'>
               <View className='metric-label'>
                 <View className='dot-ready' />
-                已送达
+                已抵达
               </View>
               <Text className='inbox-status-meter-value stat-number'>{mailboxStore.readyCount}</Text>
-              <Text className='inbox-status-meter-copy'>现在就可以打开的回响。</Text>
+              <Text className='inbox-status-meter-copy'>已经静静等你打开。</Text>
             </View>
 
             <View className='inbox-status-meter inbox-status-meter--waiting'>
               <View className='metric-label'>
                 <View className='dot-waiting' />
-                酝酿中
+                还在路上
               </View>
               <Text className='inbox-status-meter-value stat-number'>{mailboxStore.waitingCount}</Text>
-              <Text className='inbox-status-meter-copy'>仍在路上，还需要一点时间。</Text>
+              <Text className='inbox-status-meter-copy'>慢一点，也没有关系。</Text>
             </View>
           </View>
         </View>
@@ -126,7 +126,7 @@ const InboxPage = observer(() => {
       {mailboxStore.lastError ? (
         <ArcoNotice
           tone='warning'
-          title='同步遇到一点问题'
+          title='信箱刚刚有点走神'
           description={mailboxStore.lastError}
         />
       ) : null}
@@ -134,30 +134,37 @@ const InboxPage = observer(() => {
       {mailboxStore.lastError ? (
         <View>
           <ArcoButton variant='text' onClick={() => void mailboxStore.refreshReplies()}>
-            重新同步信箱
+            再试着同步一次
           </ArcoButton>
         </View>
       ) : null}
 
       {mailboxStore.syncing && mailboxStore.inboxItems.length === 0 ? (
-        <LoadingState text='正在同步信箱…' />
+        <LoadingState text='正在替你看看有没有新的回响…' />
       ) : mailboxStore.inboxItems.length === 0 ? (
         <ArcoEmpty
-          title='还没有回响'
-          description='写下第一封信后，这里会开始有故事，也会开始有等待。'
-          actionText='去写信'
+          title='这里暂时还是安静的'
+          description='等你写下第一封信之后，回响和等待都会慢慢在这里出现。'
+          actionText='去写第一封信'
           onAction={() => Taro.navigateTo({ url: '/pages/write/index' })}
         />
       ) : (
         mailboxStore.inboxItems.map((reply, index) => {
           const isReady = reply.status === 'ready';
+          const hasGeneratedBody = reply.body.trim().length > 0;
+          const aiGenerated = typeof reply.aiGenerated === 'boolean'
+            ? reply.aiGenerated
+            : (isReady ? reply.preview === '你的来信已收到，回响已生成。' : hasGeneratedBody);
+          const aiGenerating = !isReady && !aiGenerated;
           const stamp = formatDateTime(reply.createdAt).slice(5, 10).replace('-', '.');
           const memorialLabel = reply.sourceType === 'memorial'
             ? getMemorialLabel(reply.memorialEventId)
             : '日常回响';
           const previewText = isReady
             ? reply.preview
-            : '这封回响仍在路上，正在为你安静酝酿。';
+            : aiGenerated
+              ? '回响已经写好，只等合适的时候来到你面前。'
+              : '系统正顺着你的来信慢慢写回这封回应。';
 
           return (
             <ArcoCard
@@ -178,7 +185,7 @@ const InboxPage = observer(() => {
                     <View className='status-inline inbox-mail-status'>
                       <View className={isReady ? 'dot-ready' : 'dot-waiting'} />
                       <Text className='text-overline text-driftwood'>
-                        {isReady ? '已送达' : '酝酿中'}
+                        {isReady ? (aiGenerated ? 'AI 回响已抵达' : '系统回响已抵达') : aiGenerated ? 'AI 已写好，等它到来' : 'AI 正在写回'}
                       </Text>
                     </View>
                     <Text className='inbox-mail-subject'>{reply.subject}</Text>
@@ -188,9 +195,14 @@ const InboxPage = observer(() => {
 
                 <View className='inbox-mail-meta'>
                   <Text className='inbox-mail-time'>
-                    写于 {formatDateTime(reply.createdAt)}
+                    写下于 {formatDateTime(reply.createdAt)}
                   </Text>
-                  <Text className='inbox-mail-chip'>{memorialLabel}</Text>
+                  <View className='flex items-center gap-2'>
+                    <Text className='inbox-mail-chip'>{memorialLabel}</Text>
+                    <Text className='inbox-mail-chip'>
+                      {aiGenerated ? 'AI 生成' : aiGenerating ? 'AI 生成中' : '系统模板'}
+                    </Text>
+                  </View>
                 </View>
 
                 <Text className='inbox-mail-preview line-clamp-3'>
@@ -199,10 +211,14 @@ const InboxPage = observer(() => {
 
                 <View className='inbox-mail-footer'>
                   <Text className='inbox-mail-action'>
-                    {isReady ? '打开回响' : '继续等待'}
+                    {isReady ? '慢慢打开' : aiGenerated ? '再等等它' : '先让它写完'}
                   </Text>
                   <Text className='inbox-mail-hint'>
-                    {isReady ? '轻触阅读这封已经抵达的回信。' : `预计 ${formatRemaining(reply.availableAt)}`}
+                    {isReady
+                      ? '它已经到了，想看的时候就打开。'
+                      : aiGenerated
+                        ? `已经写好，大约 ${formatRemaining(reply.availableAt)} 后会来到这里`
+                        : `大约 ${formatRemaining(reply.availableAt)} 后会来到这里`}
                   </Text>
                 </View>
               </View>
