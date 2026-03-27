@@ -7,7 +7,6 @@ import { ArcoCard } from '@/components/arco/card';
 import { ArcoEmpty } from '@/components/arco/empty';
 import { LoadingState } from '@/components/arco/loading-state';
 import { ArcoNotice } from '@/components/arco/notice';
-import { SectionHeading } from '@/components/arco/section-heading';
 import { PageShell } from '@/components/layout/page-shell';
 import { useRootStore } from '@/stores/root-store';
 import { cn } from '@/utils/cn';
@@ -55,29 +54,71 @@ const InboxPage = observer(() => {
         </View>
       )}
     >
-      <ArcoCard tone='emphasis' padding='lg' delay={1}>
-        <SectionHeading
-          eyebrow='当前状态'
-          title='信箱里的回响正在积累'
-          description='收件箱只展示此刻最值得打开的状态，不再用卡片堆叠制造层级。'
-        />
-        <View className='mt-6 metric-cluster'>
-          <View className='metric-tile'>
-            <View className='metric-label'>
-              <View className='dot-ready' />
-              已送达
-            </View>
-            <Text className='metric-value stat-number'>{mailboxStore.readyCount}</Text>
-            <Text className='metric-caption'>现在就可以打开的回响。</Text>
+      <ArcoCard tone='emphasis' padding='lg' delay={1} className='inbox-status-hero-card'>
+        <View className='inbox-status-hero'>
+          <View className='inbox-status-copy'>
+            <Text className='inbox-status-eyebrow'>当前状态</Text>
+            <Text className='inbox-status-title'>信箱里的回响正在积累</Text>
+            <Text className='inbox-status-description'>
+              收件箱只呈现此刻最值得打开的来信，让等待、送达与打开发生在同一张安静邮路上。
+            </Text>
           </View>
 
-          <View className='metric-tile'>
-            <View className='metric-label'>
-              <View className='dot-waiting' />
-              酝酿中
+          <View className='inbox-status-visual anim-gentle-sway'>
+            <View className='inbox-status-route' />
+
+            <View className='inbox-status-sheet inbox-status-sheet--back'>
+              <View className='inbox-status-sheet-lines'>
+                <View className='inbox-status-sheet-line inbox-status-sheet-line--long' />
+                <View className='inbox-status-sheet-line inbox-status-sheet-line--medium' />
+                <View className='inbox-status-sheet-line inbox-status-sheet-line--long' />
+                <View className='inbox-status-sheet-line inbox-status-sheet-line--short' />
+              </View>
             </View>
-            <Text className='metric-value stat-number'>{mailboxStore.waitingCount}</Text>
-            <Text className='metric-caption'>仍在路上，还需要一点时间。</Text>
+
+            <View className='inbox-status-sheet inbox-status-sheet--front'>
+              <View className='inbox-status-sheet-header' />
+              <View className='inbox-status-sheet-body'>
+                <View className='inbox-status-sheet-line inbox-status-sheet-line--long' />
+                <View className='inbox-status-sheet-line inbox-status-sheet-line--long' />
+                <View className='inbox-status-sheet-line inbox-status-sheet-line--medium' />
+              </View>
+              <Text className='inbox-status-sheet-signature'>想念会被接住</Text>
+            </View>
+
+            <View className='hero-postmark hero-postmark--red inbox-status-stamp'>
+              <View className='hero-postmark-ring hero-postmark-ring--outer' />
+              <View className='hero-postmark-ring hero-postmark-ring--inner' />
+              <Text className='hero-postmark-top'>AIR MAIL</Text>
+              <Text className='hero-postmark-center'>云端回信</Text>
+              <Text className='hero-postmark-bottom'>POST OFFICE</Text>
+              <View className='hero-postmark-stars'>
+                <View className='hero-postmark-star' />
+                <View className='hero-postmark-star' />
+                <View className='hero-postmark-star' />
+                <View className='hero-postmark-star' />
+              </View>
+            </View>
+          </View>
+
+          <View className='inbox-status-meters'>
+            <View className='inbox-status-meter inbox-status-meter--ready'>
+              <View className='metric-label'>
+                <View className='dot-ready' />
+                已送达
+              </View>
+              <Text className='inbox-status-meter-value stat-number'>{mailboxStore.readyCount}</Text>
+              <Text className='inbox-status-meter-copy'>现在就可以打开的回响。</Text>
+            </View>
+
+            <View className='inbox-status-meter inbox-status-meter--waiting'>
+              <View className='metric-label'>
+                <View className='dot-waiting' />
+                酝酿中
+              </View>
+              <Text className='inbox-status-meter-value stat-number'>{mailboxStore.waitingCount}</Text>
+              <Text className='inbox-status-meter-copy'>仍在路上，还需要一点时间。</Text>
+            </View>
           </View>
         </View>
       </ArcoCard>

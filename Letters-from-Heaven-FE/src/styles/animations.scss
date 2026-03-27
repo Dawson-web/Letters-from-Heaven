@@ -164,6 +164,192 @@
   }
 }
 
+@keyframes doveCarryFlight {
+  0% {
+    opacity: 0;
+    transform: translate(-120rpx, 36rpx) scale(0.82) rotate(-8deg);
+  }
+
+  14% {
+    opacity: 1;
+  }
+
+  34% {
+    opacity: 1;
+    transform: translate(36rpx, 20rpx) scale(0.98) rotate(-2deg);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translate(190rpx, -12rpx) scale(1) rotate(6deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(420rpx, -196rpx) scale(0.48) rotate(14deg);
+  }
+}
+
+@keyframes doveWingLeft {
+  0%,
+  100% {
+    transform: rotate(-18deg) scaleY(1);
+  }
+
+  50% {
+    transform: rotate(20deg) scaleY(0.84);
+  }
+}
+
+@keyframes doveWingRight {
+  0%,
+  100% {
+    transform: rotate(14deg) scaleY(1);
+  }
+
+  50% {
+    transform: rotate(-18deg) scaleY(0.86);
+  }
+}
+
+@keyframes doveShadowMove {
+  0% {
+    opacity: 0;
+    transform: translate(-100rpx, 0) scale(0.7);
+  }
+
+  18%,
+  64% {
+    opacity: 0.24;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(280rpx, -12rpx) scale(0.24);
+  }
+}
+
+@keyframes letterPickupFade {
+  0%,
+  18% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  30% {
+    opacity: 0.24;
+    transform: translate(20rpx, -18rpx) scale(0.7);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(48rpx, -30rpx) scale(0.4);
+  }
+}
+
+@keyframes carriedLetterReveal {
+  0%,
+  18% {
+    opacity: 0;
+    transform: translate(-26rpx, 18rpx) rotate(-12deg) scale(0.72);
+  }
+
+  34%,
+  72% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(-4deg) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(22rpx, -26rpx) rotate(10deg) scale(0.5);
+  }
+}
+
+@keyframes routeDrift {
+  0%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.24;
+  }
+
+  50% {
+    stroke-dashoffset: -18;
+    opacity: 0.6;
+  }
+}
+
+@keyframes envelopeFlapLift {
+  0%,
+  18% {
+    transform: rotate(0deg);
+  }
+
+  54% {
+    transform: rotate(-150deg);
+  }
+
+  100% {
+    transform: rotate(-165deg);
+  }
+}
+
+@keyframes sealFade {
+  0%,
+  20% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  48%,
+  100% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+}
+
+@keyframes letterPullOut {
+  0%,
+  22% {
+    opacity: 0.9;
+    transform: translateY(102rpx) scale(0.76);
+  }
+
+  58% {
+    opacity: 1;
+    transform: translateY(-26rpx) scale(0.92);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(-72rpx) scale(1);
+  }
+}
+
+@keyframes letterUnfold {
+  0%,
+  40% {
+    border-radius: 24rpx;
+  }
+
+  100% {
+    border-radius: 28rpx;
+  }
+}
+
+@keyframes letterLineReveal {
+  0%,
+  48% {
+    opacity: 0;
+    transform: translateY(10rpx);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes letterReveal {
   from {
     opacity: 0;

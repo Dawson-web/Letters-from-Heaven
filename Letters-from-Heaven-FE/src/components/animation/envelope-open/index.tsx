@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Text, View } from '@tarojs/components';
 
 import { ArcoButton } from '@/components/arco/button';
-import { LottiePlayer } from '@/components/animation/lottie-player';
 
 interface EnvelopeOpenProps {
   subject?: string;
@@ -11,30 +10,22 @@ interface EnvelopeOpenProps {
   onComplete?: () => void;
 }
 
-/** opening 阶段安全超时 */
-const SAFETY_TIMEOUT_MS = 3000;
-/** CSS 回退动画播放时长 */
-const CSS_FALLBACK_DURATION_MS = 2000;
+const OPEN_SCENE_DURATION_MS = 2500;
 
-/**
- * 开信动画
- * Linen 底色，居中信封图标 + 点击打开
- * 优先 Lottie，失败时降级 CSS 动画
- */
 export function EnvelopeOpen({ subject, relation, onComplete }: EnvelopeOpenProps) {
   const [phase, setPhase] = useState<'cover' | 'opening' | 'done'>('cover');
-  const [useFallback, setUseFallback] = useState(false);
   const completedRef = useRef(false);
 
   const doComplete = () => {
     if (completedRef.current) {
       return;
     }
+
     completedRef.current = true;
     setPhase('done');
     setTimeout(() => {
       onComplete?.();
-    }, 300);
+    }, 320);
   };
 
   const handleTap = () => {
@@ -43,7 +34,6 @@ export function EnvelopeOpen({ subject, relation, onComplete }: EnvelopeOpenProp
     }
   };
 
-  // opening 阶段安全超时
   useEffect(() => {
     if (phase !== 'opening') {
       return;
@@ -51,22 +41,11 @@ export function EnvelopeOpen({ subject, relation, onComplete }: EnvelopeOpenProp
 
     const timer = setTimeout(() => {
       doComplete();
-    }, SAFETY_TIMEOUT_MS);
+    }, OPEN_SCENE_DURATION_MS);
 
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
-
-  const handleAnimComplete = () => {
-    doComplete();
-  };
-
-  const handleAnimError = () => {
-    setUseFallback(true);
-    setTimeout(() => {
-      doComplete();
-    }, CSS_FALLBACK_DURATION_MS);
-  };
 
   if (phase === 'done') {
     return null;
@@ -76,50 +55,44 @@ export function EnvelopeOpen({ subject, relation, onComplete }: EnvelopeOpenProp
     <View className='envelope-open-overlay'>
       {phase === 'cover' ? (
         <View className='envelope-open-cover anim-scale-in'>
-          {/* 线条信封图标 — CSS 模拟 */}
-          <View className='envelope-cover-icon mb-8'>
-            <View
-              className='relative'
-              style={{ width: '64px', height: '44px' }}
-            >
-              <View
-                style={{
-                  position: 'absolute',
-                  top: '8px',
-                  left: '0',
-                  right: '0',
-                  bottom: '0',
-                  borderRadius: '4px',
-                  border: '1.5px solid #9B958D',
-                }}
-              />
-              <View
-                style={{
-                  position: 'absolute',
-                  top: '8px',
-                  left: '0',
-                  right: '0',
-                  height: '20px',
-                  borderLeft: '1.5px solid #9B958D',
-                  borderRight: '1.5px solid #9B958D',
-                  borderTop: '1.5px solid #9B958D',
-                  borderRadius: '4px 4px 0 0',
-                  clipPath: 'polygon(0 0, 50% 100%, 100% 0)',
-                }}
-              />
+          <View className='mail-open-scene mail-open-scene--cover'>
+            <View className='mail-open-route' />
+
+            <View className='mail-open-note' />
+
+            <View className='mail-open-envelope-cover'>
+              <View className='mail-open-paper-preview'>
+                <View className='mail-open-paper-line mail-open-paper-line--long' />
+                <View className='mail-open-paper-line mail-open-paper-line--medium' />
+                <View className='mail-open-paper-line mail-open-paper-line--short' />
+              </View>
+              <View className='mail-open-envelope-body' />
+              <View className='mail-open-envelope-flap' />
+              <View className='mail-open-envelope-seal' />
+            </View>
+
+            <View className='hero-postmark hero-postmark--red mail-open-stamp'>
+              <View className='hero-postmark-ring hero-postmark-ring--outer' />
+              <View className='hero-postmark-ring hero-postmark-ring--inner' />
+              <Text className='hero-postmark-top'>AIR MAIL</Text>
+              <Text className='hero-postmark-center'>云端回信</Text>
+              <Text className='hero-postmark-bottom'>OPEN LETTER</Text>
+              <View className='hero-postmark-stars'>
+                <View className='hero-postmark-star' />
+                <View className='hero-postmark-star' />
+                <View className='hero-postmark-star' />
+                <View className='hero-postmark-star' />
+              </View>
             </View>
           </View>
 
-          <Text className='block text-center text-heading text-charcoal'>
-            {subject || '一封来自远方的回响'}
-          </Text>
+          <Text className='mail-scene-title'>{subject || '一封来自远方的回响'}</Text>
           {relation ? (
-            <Text className='mt-3 block text-center text-body text-driftwood'>
-              来自{relation}的方向
-            </Text>
-          ) : null}
+            <Text className='mail-scene-copy'>来自{relation}的方向，正等你亲手拆封。</Text>
+          ) : (
+            <Text className='mail-scene-copy'>像真正的来信一样，轻触拆封，再慢慢展开。</Text>
+          )}
 
-          {/* 分隔点 */}
           <View className='divider-dots mt-6'>
             <View className='divider-dot' />
             <View className='divider-dot' />
@@ -128,39 +101,36 @@ export function EnvelopeOpen({ subject, relation, onComplete }: EnvelopeOpenProp
 
           <View className='mt-2'>
             <ArcoButton variant='outline' size='sm' onClick={handleTap}>
-              轻触打开
+              轻触拆封
             </ArcoButton>
           </View>
         </View>
       ) : (
         <View className='envelope-open-playing'>
-          {/* Lottie 动画（未降级时显示） */}
-          {!useFallback ? (
-            <View className='envelope-open-lottie'>
-              <LottiePlayer
-                src='/assets/lottie/envelope-open.json'
-                width={200}
-                height={200}
-                loop={false}
-                autoPlay
-                onComplete={handleAnimComplete}
-                onError={handleAnimError}
-              />
-            </View>
-          ) : null}
+          <View className='mail-open-scene mail-open-scene--opening'>
+            <View className='mail-unseal-shadow' />
+            <View className='mail-unseal-envelope'>
+              <View className='mail-unseal-envelope-back' />
 
-          {/* CSS 回退动画（降级时显示） */}
-          {useFallback ? (
-            <View className='envelope-open-css-fallback-visible'>
-              <View className='envelope-css-open-anim'>
-                <View className='envelope-icon-lg' />
+              <View className='mail-unseal-letter-wrap'>
+                <View className='mail-unseal-letter'>
+                  <Text className='mail-unseal-letter-title'>{subject || '这封回响正在展开'}</Text>
+                  <View className='mail-unseal-letter-divider' />
+                  <View className='mail-unseal-letter-line mail-unseal-letter-line--long' />
+                  <View className='mail-unseal-letter-line mail-unseal-letter-line--long' />
+                  <View className='mail-unseal-letter-line mail-unseal-letter-line--medium' />
+                  <View className='mail-unseal-letter-line mail-unseal-letter-line--long' />
+                </View>
               </View>
-            </View>
-          ) : null}
 
-          <Text className='mt-6 block text-center text-body text-driftwood anim-fade-in anim-delay-3'>
-            正在展开这封回响
-          </Text>
+              <View className='mail-unseal-envelope-front' />
+              <View className='mail-unseal-flap' />
+              <View className='mail-unseal-seal' />
+            </View>
+          </View>
+
+          <Text className='mail-scene-title'>正在拆封并展开这封回响</Text>
+          <Text className='mail-scene-copy'>信纸会先被抽出，再慢慢铺开到你面前。</Text>
         </View>
       )}
     </View>

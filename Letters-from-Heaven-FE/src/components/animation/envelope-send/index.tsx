@@ -2,96 +2,74 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Text, View } from '@tarojs/components';
 
-import { LottiePlayer } from '@/components/animation/lottie-player';
-
 interface EnvelopeSendProps {
   relation?: string;
   onComplete?: () => void;
 }
 
-/** 安全超时：如果 Lottie 在此时间内未完成，自动降级并完成 */
-const SAFETY_TIMEOUT_MS = 3500;
-/** CSS 回退动画播放时长 */
-const CSS_FALLBACK_DURATION_MS = 2500;
+const SCENE_DURATION_MS = 3400;
 
-/**
- * 信封发送动画
- * Linen 底色遮罩，优先 Lottie，失败时降级为 CSS 动画
- */
 export function EnvelopeSend({ relation, onComplete }: EnvelopeSendProps) {
   const [phase, setPhase] = useState<'playing' | 'done'>('playing');
-  const [useFallback, setUseFallback] = useState(false);
   const completedRef = useRef(false);
 
   const doComplete = () => {
     if (completedRef.current) {
       return;
     }
+
     completedRef.current = true;
     setPhase('done');
     setTimeout(() => {
       onComplete?.();
-    }, 500);
+    }, 420);
   };
 
-  // 安全超时：无论 Lottie 是否成功，超时后自动完成
   useEffect(() => {
     const timer = setTimeout(() => {
       doComplete();
-    }, SAFETY_TIMEOUT_MS);
+    }, SCENE_DURATION_MS);
 
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Lottie 动画完成
-  const handleAnimComplete = () => {
-    doComplete();
-  };
-
-  // Lottie 加载失败 → 降级为 CSS 动画
-  const handleAnimError = () => {
-    setUseFallback(true);
-    // CSS 回退动画播放完后自动完成
-    setTimeout(() => {
-      doComplete();
-    }, CSS_FALLBACK_DURATION_MS);
-  };
-
   return (
-    <View
-      className={`envelope-send-overlay ${phase === 'done' ? 'envelope-send-overlay--out' : ''}`}
-    >
+    <View className={`envelope-send-overlay ${phase === 'done' ? 'envelope-send-overlay--out' : ''}`}>
       <View className='envelope-send-content'>
-        {/* Lottie 动画（未降级时显示） */}
-        {!useFallback ? (
-          <View className='envelope-send-lottie'>
-            <LottiePlayer
-              src='/assets/lottie/envelope-send.json'
-              width={200}
-              height={200}
-              loop={false}
-              autoPlay
-              onComplete={handleAnimComplete}
-              onError={handleAnimError}
-            />
-          </View>
-        ) : null}
+        <View className='mail-flight-scene'>
+          <View className='mail-flight-route' />
+          <View className='mail-flight-trail mail-flight-trail--one' />
+          <View className='mail-flight-trail mail-flight-trail--two' />
 
-        {/* CSS 回退动画（降级时显示） */}
-        {useFallback ? (
-          <View className='envelope-send-fallback-visible'>
-            <View className='envelope-css-icon anim-fade-in'>
-              <View className='envelope-icon-lg' />
+          <View className='mail-origin-envelope'>
+            <View className='mail-origin-envelope-paper' />
+          </View>
+
+          <View className='mail-dove-group'>
+            <View className='mail-dove-shadow' />
+            <View className='mail-dove'>
+              <View className='mail-dove-wing mail-dove-wing--left' />
+              <View className='mail-dove-wing mail-dove-wing--right' />
+              <View className='mail-dove-tail' />
+              <View className='mail-dove-body' />
+              <View className='mail-dove-head' />
+              <View className='mail-dove-beak' />
             </View>
-            <View className='envelope-css-fly'>
-              <Text className='text-xl text-fog'>↑</Text>
+
+            <View className='mail-dove-letter'>
+              <View className='mail-dove-letter-flap' />
+              <View className='mail-dove-letter-line mail-dove-letter-line--long' />
+              <View className='mail-dove-letter-line mail-dove-letter-line--medium' />
             </View>
           </View>
-        ) : null}
+        </View>
 
-        <Text className='mt-8 block text-center text-body text-driftwood anim-fade-in anim-delay-2'>
-          {relation ? `寄往${relation}的回响正在路上` : '信件正在飞往云端'}
+        <Text className='mail-scene-title'>
+          {relation ? `白鸽已衔起写给${relation}的信` : '白鸽已衔起这封信'}
+        </Text>
+        <Text className='mail-scene-copy'>
+          它会沿着这段安静邮路飞远，等回响抵达时，再把思念重新送回你手里。
         </Text>
       </View>
     </View>
