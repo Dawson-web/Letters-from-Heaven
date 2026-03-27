@@ -7,16 +7,17 @@ import { cn } from '@/utils/cn';
 interface LetterPaperProps {
   children: ReactNode;
   className?: string;
+  variant?: 'default' | 'hero';
 }
 
-/**
- * 信纸质感容器
- * Parchment 底色 + 横线纹理 + 左侧装订留白
- */
-export function LetterPaper({ children, className }: LetterPaperProps) {
+export function LetterPaper({
+  children,
+  className,
+  variant = 'default',
+}: LetterPaperProps) {
   return (
-    <View className={cn('letter-paper', className)}>
-      <View className='letter-paper-inner'>
+    <View className={cn('letter-paper', variant === 'hero' && 'letter-paper--hero', className)}>
+      <View className={cn('letter-paper-inner', variant === 'hero' && 'letter-paper-inner--hero')}>
         {children}
       </View>
     </View>

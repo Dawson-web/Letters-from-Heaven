@@ -6,8 +6,11 @@ import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
 import { ArcoEmpty } from '@/components/arco/empty';
 import { LoadingState } from '@/components/arco/loading-state';
+import { ArcoNotice } from '@/components/arco/notice';
+import { SectionHeading } from '@/components/arco/section-heading';
 import { PageShell } from '@/components/layout/page-shell';
 import { useRootStore } from '@/stores/root-store';
+import { cn } from '@/utils/cn';
 import { formatDateTime, formatRemaining } from '@/utils/time';
 
 const InboxPage = observer(() => {
@@ -38,46 +41,61 @@ const InboxPage = observer(() => {
 
   return (
     <PageShell
+      eyebrow='等待打开的那一刻'
       title='收件箱'
-      subtitle='等待你愿意打开的那一刻。'
+      subtitle='这里不会瞬时刷新情绪，它只在你愿意打开的时候给出回应。'
+      meta={(
+        <View className='page-shell-actions'>
+          <ArcoButton
+            size='md'
+            onClick={() => Taro.navigateTo({ url: '/pages/write/index' })}
+          >
+            再写一封信
+          </ArcoButton>
+        </View>
+      )}
     >
-      <ArcoCard delay={1} className='card-primary'>
-        <Text className='text-overline text-driftwood'>当前状态</Text>
-        <View className='mt-5 flex'>
-          <View className='flex-1'>
-            <View className='mb-3 flex items-center gap-2'>
+      <ArcoCard tone='emphasis' padding='lg' delay={1}>
+        <SectionHeading
+          eyebrow='当前状态'
+          title='信箱里的回响正在积累'
+          description='收件箱只展示此刻最值得打开的状态，不再用卡片堆叠制造层级。'
+        />
+        <View className='mt-6 metric-cluster'>
+          <View className='metric-tile'>
+            <View className='metric-label'>
               <View className='dot-ready' />
-              <Text className='text-overline text-driftwood'>已送达</Text>
+              已送达
             </View>
-            <Text className='text-display text-charcoal stat-number'>
-              {mailboxStore.readyCount}
-            </Text>
+            <Text className='metric-value stat-number'>{mailboxStore.readyCount}</Text>
+            <Text className='metric-caption'>现在就可以打开的回响。</Text>
           </View>
-          <View className='w-px bg-linen-edge' />
-          <View className='flex-1'>
-            <View className='mb-3 flex items-center gap-2'>
+
+          <View className='metric-tile'>
+            <View className='metric-label'>
               <View className='dot-waiting' />
-              <Text className='text-overline text-driftwood'>酝酿中</Text>
+              酝酿中
             </View>
-            <Text className='text-display text-charcoal stat-number'>
-              {mailboxStore.waitingCount}
-            </Text>
+            <Text className='metric-value stat-number'>{mailboxStore.waitingCount}</Text>
+            <Text className='metric-caption'>仍在路上，还需要一点时间。</Text>
           </View>
         </View>
       </ArcoCard>
 
       {mailboxStore.lastError ? (
-        <ArcoCard delay={2}>
-          <Text className='text-body font-semibold text-charcoal'>同步遇到一点问题</Text>
-          <Text className='mt-2 block text-caption text-driftwood'>
-            {mailboxStore.lastError}
-          </Text>
-          <View className='mt-4'>
-            <ArcoButton variant='text' onClick={() => void mailboxStore.refreshReplies()}>
-              重新同步
-            </ArcoButton>
-          </View>
-        </ArcoCard>
+        <ArcoNotice
+          tone='warning'
+          title='同步遇到一点问题'
+          description={mailboxStore.lastError}
+        />
+      ) : null}
+
+      {mailboxStore.lastError ? (
+        <View>
+          <ArcoButton variant='text' onClick={() => void mailboxStore.refreshReplies()}>
+            重新同步信箱
+          </ArcoButton>
+        </View>
       ) : null}
 
       {mailboxStore.syncing && mailboxStore.inboxItems.length === 0 ? (
@@ -85,63 +103,71 @@ const InboxPage = observer(() => {
       ) : mailboxStore.inboxItems.length === 0 ? (
         <ArcoEmpty
           title='还没有回响'
-          description='写下第一封信后，这里会开始有故事。'
+          description='写下第一封信后，这里会开始有故事，也会开始有等待。'
           actionText='去写信'
           onAction={() => Taro.navigateTo({ url: '/pages/write/index' })}
         />
       ) : (
-        mailboxStore.inboxItems.map((reply, index) => (
-          <ArcoCard
-            key={reply.id}
-            className='flex flex-col gap-4'
-            delay={Math.min(index + 2, 9)}
-            onClick={() =>
-              Taro.navigateTo({
-                url: `/pages/reply/index?id=${reply.id}`,
-              })
-            }
-          >
-            {/* 标题行 */}
-            <View className='flex items-center gap-2'>
-              <View
-                className={
-                  reply.status === 'ready'
-                    ? 'dot-ready'
-                    : 'dot-waiting'
-                }
-              />
-              <Text className='flex-1 text-heading text-charcoal'>
-                {reply.subject}
-              </Text>
-              <View className='postmark'>
-                {formatDateTime(reply.createdAt).slice(5, 10).replace('-', '.')}
+        mailboxStore.inboxItems.map((reply, index) => {
+          const isReady = reply.status === 'ready';
+          const stamp = formatDateTime(reply.createdAt).slice(5, 10).replace('-', '.');
+          const memorialLabel = reply.sourceType === 'memorial'
+            ? getMemorialLabel(reply.memorialEventId)
+            : '日常回响';
+          const previewText = isReady
+            ? reply.preview
+            : '这封回响仍在路上，正在为你安静酝酿。';
+
+          return (
+            <ArcoCard
+              key={reply.id}
+              className={cn('inbox-mail-item', isReady ? 'inbox-mail-item--ready' : 'inbox-mail-item--waiting')}
+              delay={Math.min(index + 2, 9)}
+              tone={isReady ? 'default' : 'muted'}
+              padding='md'
+              onClick={() =>
+                Taro.navigateTo({
+                  url: `/pages/reply/index?id=${reply.id}`,
+                })
+              }
+            >
+              <View className='inbox-mail-body'>
+                <View className='inbox-mail-head'>
+                  <View className='inbox-mail-head-main'>
+                    <View className='status-inline inbox-mail-status'>
+                      <View className={isReady ? 'dot-ready' : 'dot-waiting'} />
+                      <Text className='text-overline text-driftwood'>
+                        {isReady ? '已送达' : '酝酿中'}
+                      </Text>
+                    </View>
+                    <Text className='inbox-mail-subject'>{reply.subject}</Text>
+                  </View>
+                  <View className='postmark inbox-mail-postmark'>{stamp}</View>
+                </View>
+
+                <View className='inbox-mail-meta'>
+                  <Text className='inbox-mail-time'>
+                    写于 {formatDateTime(reply.createdAt)}
+                  </Text>
+                  <Text className='inbox-mail-chip'>{memorialLabel}</Text>
+                </View>
+
+                <Text className='inbox-mail-preview line-clamp-3'>
+                  {previewText}
+                </Text>
+
+                <View className='inbox-mail-footer'>
+                  <Text className='inbox-mail-action'>
+                    {isReady ? '打开回响' : '继续等待'}
+                  </Text>
+                  <Text className='inbox-mail-hint'>
+                    {isReady ? '轻触阅读这封已经抵达的回信。' : `预计 ${formatRemaining(reply.availableAt)}`}
+                  </Text>
+                </View>
               </View>
-            </View>
-
-            {/* 时间戳 */}
-            <Text className='text-overline text-driftwood'>
-              写于 {formatDateTime(reply.createdAt)}
-            </Text>
-
-            {reply.sourceType === 'memorial' ? (
-              <Text className='text-overline text-fog'>
-                {getMemorialLabel(reply.memorialEventId)}
-              </Text>
-            ) : null}
-
-            {/* 预览 */}
-            <Text className='line-clamp-2 text-caption text-driftwood'>
-              {reply.status === 'ready'
-                ? reply.preview
-                : `预计 ${formatRemaining(reply.availableAt)}`}
-            </Text>
-
-            {/* 操作提示 */}
-            <Text className='text-caption font-medium text-stone'>
-              {reply.status === 'ready' ? '打开回响 →' : '等待中…'}
-            </Text>
-          </ArcoCard>
-        ))
+            </ArcoCard>
+          );
+        })
       )}
     </PageShell>
   );

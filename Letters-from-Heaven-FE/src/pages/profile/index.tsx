@@ -2,10 +2,10 @@ import { Text, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { observer } from 'mobx-react-lite';
 
-import { AnimatedView } from '@/components/animation/animated-view';
 import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
 import { ArcoNotice } from '@/components/arco/notice';
+import { SectionHeading } from '@/components/arco/section-heading';
 import { PageShell } from '@/components/layout/page-shell';
 import { getErrorMessage } from '@/services/request';
 import { useRootStore } from '@/stores/root-store';
@@ -42,68 +42,69 @@ const ProfilePage = observer(() => {
 
   return (
     <PageShell
+      eyebrow='信箱管理'
       title='我的'
-      subtitle='信箱统计与数据管理。'
+      subtitle='这里保留当前信箱的统计、边界说明和数据清理操作。'
     >
-      <ArcoCard delay={1}>
-        <AnimatedView animation='fade-in-up'>
-          <Text className='text-heading text-charcoal'>当前状态</Text>
-          <Text className='mt-3 block text-body text-driftwood'>
-            资料授权流程已移除。这里保留信箱统计、体验边界和数据管理。
-          </Text>
-        </AnimatedView>
-      </ArcoCard>
+      <ArcoCard tone='emphasis' padding='lg' delay={1}>
+        <SectionHeading
+          eyebrow='当前信箱'
+          title='把状态和操作都收拢到一个安静的面板里'
+          description='这页不再承担营销式介绍，只保留真正和信箱运行有关的信息。'
+        />
 
-      {/* 信箱统计 */}
-      <ArcoCard delay={2}>
-        <AnimatedView animation='fade-in-up'>
-          <Text className='text-heading text-charcoal'>当前信箱</Text>
-        </AnimatedView>
-        <View className='mt-5 flex'>
-          <AnimatedView animation='fade-in-up' delay={3} className='flex-1 p-4 text-center'>
-            <Text className='text-overline text-driftwood'>信件数</Text>
-            <Text className='mt-2 block text-display text-charcoal stat-number'>
-              {mailboxStore.letters.length}
-            </Text>
-          </AnimatedView>
+        <View className='mt-6 metric-cluster'>
+          <View className='metric-tile'>
+            <Text className='metric-label'>信件数</Text>
+            <Text className='metric-value stat-number'>{mailboxStore.letters.length}</Text>
+            <Text className='metric-caption'>已经寄出的全部信件。</Text>
+          </View>
 
-          <View className='w-px bg-linen-edge' />
-
-          <AnimatedView animation='fade-in-up' delay={4} className='flex-1 p-4 text-center'>
-            <Text className='text-overline text-driftwood'>草稿</Text>
-            <Text className='mt-2 block text-display text-charcoal stat-number'>
-              {mailboxStore.draft.body ? '1' : '0'}
-            </Text>
-          </AnimatedView>
+          <View className='metric-tile'>
+            <Text className='metric-label'>草稿</Text>
+            <Text className='metric-value stat-number'>{mailboxStore.draft.body ? '1' : '0'}</Text>
+            <Text className='metric-caption'>仍然停留在草稿箱里的内容。</Text>
+          </View>
         </View>
       </ArcoCard>
 
-      {/* 体验边界 */}
-      <ArcoCard delay={3}>
-        <ArcoNotice
-          title='体验边界'
-          description='回信由 AI 生成，只用于情绪承接与纪念表达。它不代表逝者真实态度，也不建议在强烈哀伤或危机场景中作为唯一支持渠道。'
+      <ArcoNotice
+        tone='warning'
+        title='体验边界'
+        description='回响由 AI 生成，只用于情绪承接与纪念表达。它不代表逝者真实态度，也不建议在强烈哀伤或危机场景中作为唯一支持渠道。'
+      />
+
+      <ArcoCard tone='muted' padding='lg' delay={2}>
+        <SectionHeading
+          eyebrow='轻量操作'
+          title='先做不会破坏体验链路的清理'
+          description='草稿和历史信箱是两个不同层级的操作，不要把它们放在同一按钮里。'
         />
+        <View className='mt-5 flex flex-col gap-3'>
+          <ArcoButton
+            variant='text'
+            onClick={() => Taro.navigateTo({ url: '/pages/ai-demo/index' })}
+          >
+            AI 接入示例页
+          </ArcoButton>
+          <ArcoButton variant='text' onClick={handleClearDraft}>
+            清空当前草稿
+          </ArcoButton>
+        </View>
       </ArcoCard>
 
-      {/* 分割线 */}
-      <View className='divider-fade' />
-
-      {/* 操作链接 */}
-      <AnimatedView animation='fade-in-up' delay={4}>
-        <ArcoButton variant='text' onClick={handleClearDraft}>
-          清空当前草稿
-        </ArcoButton>
-      </AnimatedView>
-      <AnimatedView animation='fade-in-up' delay={5}>
-        <ArcoButton
-          variant='text'
-          className='text-terracotta'
-          onClick={handleReset}
-        >
-          清空云端信箱
-        </ArcoButton>
-      </AnimatedView>
+      <ArcoCard tone='danger' padding='lg' delay={3}>
+        <SectionHeading
+          eyebrow='危险操作'
+          title='彻底清空云端信箱'
+          description='这会删除当前账号下的草稿、信件和回响记录，且无法恢复。'
+        />
+        <View className='mt-5'>
+          <ArcoButton variant='text' className='text-terracotta' onClick={handleReset}>
+            清空云端信箱
+          </ArcoButton>
+        </View>
+      </ArcoCard>
     </PageShell>
   );
 });

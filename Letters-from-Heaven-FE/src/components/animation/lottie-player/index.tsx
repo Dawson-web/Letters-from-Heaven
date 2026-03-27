@@ -42,6 +42,11 @@ export function LottiePlayer({
     let isMounted = true;
 
     const initLottie = () => {
+      if (Taro.getEnv() !== Taro.ENV_TYPE.WEAPP) {
+        onError?.();
+        return;
+      }
+
       try {
         // 动态引入 lottie-miniprogram
         // eslint-disable-next-line @typescript-eslint/no-require-imports

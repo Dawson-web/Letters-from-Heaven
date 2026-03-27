@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
-import { Text, View } from '@tarojs/components';
+import { Button, Text, View } from '@tarojs/components';
+import Taro from '@tarojs/taro';
 
 import { cn } from '@/utils/cn';
 
@@ -10,25 +11,34 @@ interface ArcoTagProps {
   onClick?: () => void;
 }
 
-/**
- * 标签胶囊
- * 36px 高，全圆角。未选中凹进去（linen 底），选中 stone 底 + 白色文字
- */
 export function ArcoTag({ active, children, onClick }: ArcoTagProps) {
+  const classes = cn(
+    'arco-tag btn-press',
+    active && 'arco-tag--active tag-select',
+  );
+  const content = (
+    <Text className={cn('arco-tag-text', active ? 'text-white' : 'text-driftwood')}>
+      {children}
+    </Text>
+  );
+
+  if (Taro.getEnv() === Taro.ENV_TYPE.WEAPP) {
+    return (
+      <View className={classes} onClick={onClick}>
+        {content}
+      </View>
+    );
+  }
+
   return (
-    <View
-      className={cn(
-        'flex items-center justify-center rounded-pill px-4',
-        active
-          ? 'bg-stone tag-select'
-          : 'border border-linen-edge bg-linen',
-      )}
-      style={{ height: '40px' }}
+    <Button
+      className={classes}
+      hoverClass='none'
+      hoverStartTime={0}
+      hoverStayTime={0}
       onClick={onClick}
     >
-      <Text className={cn('text-caption', active ? 'text-white font-medium' : 'text-driftwood')}>
-        {children}
-      </Text>
-    </View>
+      {content}
+    </Button>
   );
 }

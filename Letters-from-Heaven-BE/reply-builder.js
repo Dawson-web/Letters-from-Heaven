@@ -53,6 +53,18 @@ function comfortFor(relation) {
   }
 }
 
+function normalizeBody(input) {
+  const content = String(input || "")
+    .replace(/\r\n/g, "\n")
+    .trim();
+
+  if (!content) {
+    return "";
+  }
+
+  return content.slice(0, 1800);
+}
+
 function memorialLabel(event) {
   switch (event?.type) {
     case "qingming":
@@ -77,9 +89,9 @@ function buildWaitingReplyPayload(letterDraft, now) {
   };
 }
 
-function buildReadyReplyPayload(letter) {
+function buildReadyReplyPayload(letter, options = {}) {
   const greeting = greetingFor(letter.relation);
-  const body = [
+  const fallbackBody = [
     `${greeting}：`,
     `我看见你写下的“${excerpt(letter.body)}”。那些没有说完的话、那些你反复在心里重播的片段，都已经被认真接住了。`,
     comfortFor(letter.relation),
@@ -88,11 +100,13 @@ function buildReadyReplyPayload(letter) {
       ? `当你下次还想说话，就带着“${letter.signature}”这个名字再来写信吧，我会继续在回响里陪你。`
       : "当你下次还想说话，就再来写信吧，回响会一直在。",
   ].join("\n\n");
+  const aiBody = normalizeBody(options.aiBody);
+  const body = aiBody || fallbackBody;
 
   return {
     status: REPLY_STATUS.READY,
     subject: `${letter.relation || "远方"}的回响`,
-    preview: "这份想念已经被认真接住了。",
+    preview: aiBody ? "你的来信已收到，回响已生成。" : "这份想念已经被认真接住了。",
     body,
   };
 }

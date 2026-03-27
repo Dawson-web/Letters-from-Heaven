@@ -30,6 +30,9 @@ export default defineConfig<'vite'>(async (merge) => {
       __CLOUD_ENV__: JSON.stringify(process.env.TARO_APP_CLOUD_ENV || ''),
       __CLOUD_SERVICE__: JSON.stringify(process.env.TARO_APP_CLOUD_SERVICE || ''),
       __LOCAL_USER_ID__: JSON.stringify(process.env.TARO_APP_LOCAL_USER_ID || ''),
+      __AI_MODEL_GROUP__: JSON.stringify(process.env.TARO_APP_AI_MODEL_GROUP || ''),
+      __AI_MODEL__: JSON.stringify(process.env.TARO_APP_AI_MODEL || ''),
+      __AI_IMAGE_FUNCTION__: JSON.stringify(process.env.TARO_APP_AI_IMAGE_FUNCTION || ''),
     },
     copy: {
       patterns: [

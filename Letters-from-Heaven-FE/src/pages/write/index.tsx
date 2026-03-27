@@ -3,13 +3,15 @@ import Taro from '@tarojs/taro';
 import { useEffect, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 
-import { AnimatedView } from '@/components/animation/animated-view';
 import { EnvelopeSend } from '@/components/animation/envelope-send';
 import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
+import { FormField } from '@/components/arco/form-field';
+import { LetterPaper } from '@/components/arco/letter-paper';
+import { ArcoNotice } from '@/components/arco/notice';
+import { SectionHeading } from '@/components/arco/section-heading';
 import { ArcoTag } from '@/components/arco/tag';
 import { AuthRequiredState } from '@/components/auth/auth-required-state';
-import { LetterPaper } from '@/components/arco/letter-paper';
 import { RELATION_OPTIONS } from '@/constants/relations';
 import { PageShell } from '@/components/layout/page-shell';
 import { getErrorMessage } from '@/services/request';
@@ -41,6 +43,7 @@ const WritePage = observer(() => {
   if (!mailboxStore.boundaryAccepted) {
     return (
       <PageShell
+        eyebrow='写给想念的人'
         title='写信'
         subtitle='写信前需要先确认边界说明。'
       >
@@ -92,14 +95,27 @@ const WritePage = observer(() => {
 
   const wordCount = body.trim().length;
   const wordMin = 8;
+  const remaining = Math.max(wordMin - wordCount, 0);
+  const bodyError = wordCount > 0 && wordCount < wordMin ? `还需要 ${remaining} 个字才能投递。` : undefined;
 
   return (
     <PageShell
+      eyebrow='写给想念的人'
       title='写一封信'
       subtitle='不必完整，写下此刻想说的就好。'
-      className='sticky-cta-safe'
+      footer={(
+        <View className='sticky-cta-stack'>
+          <ArcoButton disabled={!canSend} loading={sending} onClick={handleSend} className='w-full' size='lg'>
+            {sending ? '正在投递' : '投递到云端信箱'}
+          </ArcoButton>
+          <Text className='text-center text-caption text-driftwood'>
+            {wordCount < wordMin
+              ? `还需要写 ${remaining} 个字才能投递`
+              : `已写 ${wordCount} 字，随时可以投递`}
+          </Text>
+        </View>
+      )}
     >
-      {/* 发送动画遮罩 */}
       {showSendAnim ? (
         <EnvelopeSend
           relation={relation || undefined}
@@ -107,90 +123,92 @@ const WritePage = observer(() => {
         />
       ) : null}
 
-      {/* 收信人关系选择 */}
-      <ArcoCard delay={1}>
-        <AnimatedView animation='fade-in-up'>
-          <Text className='text-body font-semibold text-charcoal'>这封信写给</Text>
-          <View className='mt-4 flex flex-wrap gap-2'>
-            {RELATION_OPTIONS.map((item) => (
-              <ArcoTag
-                key={item}
-                active={relation === item}
-                onClick={() => setRelation(item)}
-              >
-                {item}
-              </ArcoTag>
-            ))}
-          </View>
-        </AnimatedView>
+      <ArcoCard tone='emphasis' padding='lg' delay={1}>
+        <SectionHeading
+          eyebrow='收信方向'
+          title='先决定，这封思念想朝谁的方向寄去'
+          description='关系会影响回响的语气，也会帮助系统判断该如何承接你的文字。'
+        />
+        <View className='mt-5 flex flex-wrap gap-2'>
+          {RELATION_OPTIONS.map((item) => (
+            <ArcoTag
+              key={item}
+              active={relation === item}
+              onClick={() => setRelation(item)}
+            >
+              {item}
+            </ArcoTag>
+          ))}
+        </View>
       </ArcoCard>
 
-      {/* 信纸区域 */}
-      <AnimatedView animation='fade-in-up' delay={2}>
-        <LetterPaper>
+      <LetterPaper variant='hero' className='letter-paper--form'>
+        <FormField
+          label='信的标题'
+          hint='可选。如果你愿意，可以用一句最轻的开场把这封信命名。'
+        >
           <Input
-            className='bg-transparent text-body text-charcoal'
+            className='field-control'
             placeholder='比如：还记得那年夏天'
-            placeholderStyle='color: #C7C2BA'
+            placeholderStyle='color: #B5AB9C'
             value={title}
             maxlength={32}
             onInput={(event) => setTitle(event.detail.value)}
           />
+        </FormField>
 
-          <View className='divider-fade my-4' />
-
+        <FormField
+          label='信的正文'
+          hint='不需要工整，不需要完整。先写出最先冒出来的那一句。'
+          error={bodyError}
+        >
           <Textarea
-            className='h-64 w-full bg-transparent text-body leading-7 text-charcoal'
+            className='field-control field-control--textarea'
             placeholder='把今天最想说的话写下来，不必着急组织得很完整。'
-            placeholderStyle='color: #C7C2BA'
+            placeholderStyle='color: #B5AB9C'
             value={body}
             maxlength={800}
             autoHeight
             onInput={(event) => setBody(event.detail.value)}
           />
+        </FormField>
 
-          <View className='divider-fade my-4' />
-
+        <FormField
+          label='你的署名'
+          hint='可选。也可以只留下此刻的心情，不必写名字。'
+        >
           <Input
-            className='bg-transparent text-body text-charcoal'
+            className='field-control'
             placeholder='你的署名（可选）'
-            placeholderStyle='color: #C7C2BA'
+            placeholderStyle='color: #B5AB9C'
             value={signature}
             maxlength={16}
             onInput={(event) => setSignature(event.detail.value)}
           />
+        </FormField>
 
-          {/* 字数统计 */}
-          <Text className='mt-4 block text-right text-overline text-driftwood'>
-            {wordCount}/800
-          </Text>
-        </LetterPaper>
-      </AnimatedView>
+        <Text className='text-right text-overline text-driftwood'>{wordCount}/800</Text>
+      </LetterPaper>
 
-      {/* 发送按钮 */}
-      {/* 字数提示 */}
-      <AnimatedView animation='fade-in' delay={3}>
-        <Text className='text-center text-caption text-driftwood'>
-          {wordCount < wordMin
-            ? `还需要写 ${wordMin - wordCount} 个字才能投递`
-            : `已写 ${wordCount} 字，随时可以投递`}
-        </Text>
-      </AnimatedView>
+      <ArcoCard tone='muted' delay={2}>
+        <SectionHeading
+          eyebrow='写信提示'
+          title='让它像一封家书，而不是一段追问'
+          description='越具体的场景、称呼和记忆线索，越能让回响保持温柔且不空泛。'
+        />
+        <View className='mt-5 flex flex-col gap-3'>
+          <Text className='text-body text-charcoal'>可以写一个地点、一句习惯的话，或者一个一直没说出口的问题。</Text>
+          <Text className='text-body text-charcoal'>如果你只想写短短一段，也没关系，系统会尊重这份停顿感。</Text>
+        </View>
+      </ArcoCard>
 
       {sendError ? (
-        <ArcoCard>
-          <Text className='text-body font-semibold text-charcoal'>投递失败</Text>
-          <Text className='mt-2 block text-caption text-driftwood'>
-            {sendError}
-          </Text>
-        </ArcoCard>
+        <ArcoNotice
+          tone='warning'
+          title='投递失败'
+          description={sendError}
+        />
       ) : null}
-
-      <View className='sticky-cta'>
-        <ArcoButton disabled={!canSend} loading={sending} onClick={handleSend} className='w-full'>
-          {sending ? '正在投递' : '投递到云端信箱'}
-        </ArcoButton>
-      </View>
     </PageShell>
   );
 });

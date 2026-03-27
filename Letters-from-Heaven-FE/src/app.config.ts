@@ -5,14 +5,17 @@ export default defineAppConfig({
     'pages/sent/index',
     'pages/inbox/index',
     'pages/reply/index',
+    'pages/ai-demo/index',
     'pages/profile/index',
     'pages/memorial/index',
     'pages/memorial-edit/index'
   ],
   window: {
     backgroundTextStyle: 'dark',
-    backgroundColor: '#F6F4F0',
-    navigationBarBackgroundColor: '#F6F4F0',
+    backgroundColor: '#F4EFE6',
+    backgroundColorTop: '#F4EFE6',
+    backgroundColorBottom: '#F4EFE6',
+    navigationBarBackgroundColor: '#F4EFE6',
     navigationBarTitleText: '云端回信',
     navigationBarTextStyle: 'black'
   }

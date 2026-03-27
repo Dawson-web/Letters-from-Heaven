@@ -18,6 +18,7 @@ const {
   buildMemorialWaitingPayload,
   buildMemorialReadyPayload,
 } = require("./reply-builder");
+const { generateReplyBodyByAI } = require("./ai-service");
 
 function createId(prefix) {
   const random = Math.random().toString(36).slice(2, 8);
@@ -155,7 +156,9 @@ async function settleReply(reply, letter) {
     return reply;
   }
 
-  const readyPayload = buildReadyReplyPayload(serializeLetter(sourceLetter));
+  const serializedLetter = serializeLetter(sourceLetter);
+  const aiBody = reply.body || (await generateReplyBodyByAI(serializedLetter));
+  const readyPayload = buildReadyReplyPayload(serializedLetter, { aiBody });
   reply.status = readyPayload.status;
   reply.subject = readyPayload.subject;
   reply.preview = readyPayload.preview;
@@ -184,6 +187,7 @@ async function createLetter(userContext, payload) {
   const replyPayload = buildWaitingReplyPayload(input, now);
 
   await touchUser(userContext);
+  const aiBodySeed = await generateReplyBodyByAI(input);
 
   const result = await sequelize.transaction(async (transaction) => {
     const letter = await Letter.create(
@@ -214,7 +218,7 @@ async function createLetter(userContext, payload) {
         availableAtMs: replyPayload.availableAtMs,
         subject: replyPayload.subject,
         preview: replyPayload.preview,
-        body: replyPayload.body,
+        body: aiBodySeed || replyPayload.body,
       },
       { transaction }
     );

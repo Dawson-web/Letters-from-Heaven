@@ -27,6 +27,9 @@ declare namespace NodeJS {
     TARO_APP_CLOUD_ENV?: string
     TARO_APP_CLOUD_SERVICE?: string
     TARO_APP_LOCAL_USER_ID?: string
+    TARO_APP_AI_MODEL_GROUP?: string
+    TARO_APP_AI_MODEL?: string
+    TARO_APP_AI_IMAGE_FUNCTION?: string
   }
 }
 
@@ -34,3 +37,6 @@ declare const __API_BASE_URL__: string
 declare const __CLOUD_ENV__: string
 declare const __CLOUD_SERVICE__: string
 declare const __LOCAL_USER_ID__: string
+declare const __AI_MODEL_GROUP__: string
+declare const __AI_MODEL__: string
+declare const __AI_IMAGE_FUNCTION__: string

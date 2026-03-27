@@ -1,5 +1,6 @@
 {
   "miniprogramRoot": "dist/",
+  "cloudfunctionRoot": "cloudfunctions/",
   "projectname": "云端回信",
   "description": "云端回信 Taro 小程序原型",
   "appid": "wx3d4d3620bf906bcc",

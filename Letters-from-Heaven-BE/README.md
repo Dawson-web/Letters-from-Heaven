@@ -116,6 +116,30 @@ curl -X POST -H 'content-type: application/json' -d '{"action": "inc"}' https://
 - MYSQL_USERNAME
 以上三个变量的值请按实际情况填写。如果使用云托管内MySQL，可以在控制台MySQL页面获取相关信息。
 
+## AI 回信（新增）
+
+后端在回信从 `waiting` 结算到 `ready` 时，会优先调用 CloudBase AI 生成正文；调用失败会自动回退到原模板文案，不影响主流程。
+
+### 需要的环境变量
+
+- `CLOUDBASE_ENV_ID`
+- `CLOUDBASE_SECRETID`
+- `CLOUDBASE_SECRETKEY`
+- `CLOUDBASE_AI_MODEL_GROUP`（可选，默认 `hunyuan-exp`）
+- `CLOUDBASE_AI_MODEL`（可选，默认 `hunyuan-turbos-latest`）
+- `CLOUDBASE_AI_TIMEOUT_MS`（可选，默认 `12000`）
+- `CLOUDBASE_AI_ENABLED`（可选，设为 `false` 可关闭 AI，强制走模板）
+
+### 本地开发示例
+
+```bash
+CLOUDBASE_ENV_ID=xxx
+CLOUDBASE_SECRETID=xxx
+CLOUDBASE_SECRETKEY=xxx
+CLOUDBASE_AI_MODEL_GROUP=hunyuan-exp
+CLOUDBASE_AI_MODEL=hunyuan-turbos-latest
+```
+
 
 ## License
 

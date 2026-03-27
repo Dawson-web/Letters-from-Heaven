@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
-import { View } from '@tarojs/components';
+import { Button, Text, View } from '@tarojs/components';
+import Taro from '@tarojs/taro';
 
 import { cn } from '@/utils/cn';
 
@@ -8,52 +9,67 @@ interface ArcoButtonProps {
   className?: string;
   children: ReactNode;
   variant?: 'primary' | 'outline' | 'text';
+  size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   loading?: boolean;
   onClick?: () => void;
 }
 
 const variantClasses: Record<NonNullable<ArcoButtonProps['variant']>, string> = {
-  primary: 'bg-stone text-white',
-  outline: 'border border-linen-edge bg-transparent text-stone',
-  text: 'bg-transparent text-driftwood underline',
+  primary: 'arco-button--primary',
+  outline: 'arco-button--outline',
+  text: 'arco-button--text',
 };
 
-/**
- * 按钮
- * primary: Warm Stone 底色 + 白色文字
- * outline: 透明底 + linen-edge 描边
- * text: 纯文字链接风格
- */
+const sizeClasses: Record<NonNullable<ArcoButtonProps['size']>, string> = {
+  sm: 'arco-button--sm',
+  md: 'arco-button--md',
+  lg: 'arco-button--lg',
+};
+
 export function ArcoButton({
   className,
   children,
   variant = 'primary',
+  size = 'md',
   disabled,
   loading,
   onClick,
 }: ArcoButtonProps) {
   const isDisabled = disabled || loading;
+  const content = loading ? (
+    <View className='flex items-center gap-2'>
+      <View className='h-3 w-3 rounded-full border-2 border-white/30 border-t-white anim-breathe' />
+      <Text className='arco-button-label'>{children}</Text>
+    </View>
+  ) : (
+    <Text className='arco-button-label'>{children}</Text>
+  );
+  const classes = cn(
+    'arco-button btn-press',
+    variantClasses[variant],
+    sizeClasses[size],
+    isDisabled && 'arco-button--disabled',
+    className,
+  );
+
+  if (Taro.getEnv() === Taro.ENV_TYPE.WEAPP) {
+    return (
+      <View className={classes} onClick={isDisabled ? undefined : onClick}>
+        {content}
+      </View>
+    );
+  }
 
   return (
-    <View
-      className={cn(
-        'flex items-center justify-center rounded-2xl px-7 text-body font-medium btn-press',
-        variant === 'text' ? 'h-auto py-2' : 'h-[52px]',
-        variantClasses[variant],
-        isDisabled && 'opacity-35',
-        className,
-      )}
+    <Button
+      className={classes}
+      hoverClass='none'
+      hoverStartTime={0}
+      hoverStayTime={0}
       onClick={isDisabled ? undefined : onClick}
     >
-      {loading ? (
-        <View className='flex items-center gap-2'>
-          <View className='h-3 w-3 rounded-full border-2 border-white/30 border-t-white anim-breathe' />
-          {children}
-        </View>
-      ) : (
-        children
-      )}
-    </View>
+      {content}
+    </Button>
   );
 }

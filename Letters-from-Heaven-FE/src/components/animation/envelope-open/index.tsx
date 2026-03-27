@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Text, View } from '@tarojs/components';
 
+import { ArcoButton } from '@/components/arco/button';
 import { LottiePlayer } from '@/components/animation/lottie-player';
 
 interface EnvelopeOpenProps {
@@ -72,7 +73,7 @@ export function EnvelopeOpen({ subject, relation, onComplete }: EnvelopeOpenProp
   }
 
   return (
-    <View className='envelope-open-overlay' onClick={handleTap}>
+    <View className='envelope-open-overlay'>
       {phase === 'cover' ? (
         <View className='envelope-open-cover anim-scale-in'>
           {/* 线条信封图标 — CSS 模拟 */}
@@ -125,9 +126,11 @@ export function EnvelopeOpen({ subject, relation, onComplete }: EnvelopeOpenProp
             <View className='divider-dot' />
           </View>
 
-          <Text className='block text-center text-caption text-fog anim-pulse-soft'>
-            轻触打开
-          </Text>
+          <View className='mt-2'>
+            <ArcoButton variant='outline' size='sm' onClick={handleTap}>
+              轻触打开
+            </ArcoButton>
+          </View>
         </View>
       ) : (
         <View className='envelope-open-playing'>

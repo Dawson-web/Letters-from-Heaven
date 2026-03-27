@@ -9,23 +9,44 @@ interface ArcoCardProps {
   children: ReactNode;
   /** 入场动画延迟级别（1-10） */
   delay?: number;
+  tone?: 'default' | 'emphasis' | 'muted' | 'danger';
+  padding?: 'md' | 'lg';
   onClick?: () => void;
 }
 
-/**
- * 卡片容器
- * Parchment 底色，16px 圆角，暖色微弱阴影
- */
-export function ArcoCard({ className, children, delay, onClick }: ArcoCardProps) {
+export function ArcoCard({
+  className,
+  children,
+  delay,
+  tone = 'default',
+  padding = 'md',
+  onClick,
+}: ArcoCardProps) {
+  const classes = cn(
+    'card-enter',
+    onClick ? 'arco-card arco-card-button btn-press' : 'arco-card',
+    tone === 'default' && 'arco-card--default',
+    tone === 'emphasis' && 'arco-card--emphasis',
+    tone === 'muted' && 'arco-card--muted',
+    tone === 'danger' && 'arco-card--danger',
+    padding === 'md' ? 'arco-card--md' : 'arco-card--lg',
+    delay ? `anim-delay-${delay}` : undefined,
+    className,
+  );
+
+  if (onClick) {
+    return (
+      <View
+        className={classes}
+        onClick={onClick}
+      >
+        <View>{children}</View>
+      </View>
+    );
+  }
+
   return (
-    <View
-      className={cn(
-        'rounded-card border border-linen-edge bg-parchment p-7 shadow-card card-enter card-secondary',
-        delay ? `anim-delay-${delay}` : undefined,
-        className,
-      )}
-      onClick={onClick}
-    >
+    <View className={classes}>
       {children}
     </View>
   );
