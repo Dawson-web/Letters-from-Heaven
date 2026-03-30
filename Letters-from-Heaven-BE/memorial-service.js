@@ -19,6 +19,8 @@ const {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RETRY_NO_LETTER_MS = 6 * 60 * 60 * 1000;
+const TEST_DELIVERY_MIN_LEAD_MS = 60 * 1000;
+const AI_READY_PREVIEW = "你的来信已收到，回响已生成。";
 
 function createId(prefix) {
   const random = Math.random().toString(36).slice(2, 8);
@@ -58,6 +60,12 @@ function ensureHour(hour) {
   }
 }
 
+function ensureMinute(minute) {
+  if (minute < 0 || minute > 59) {
+    throw new AppError(400, "Invalid deliver minute");
+  }
+}
+
 function ensureWindow(windowStartDays, windowEndDays) {
   if (windowStartDays > windowEndDays) {
     throw new AppError(400, "Invalid event window");
@@ -94,8 +102,8 @@ function getTimeZoneOffsetMs(date, timeZone) {
   return asUTC - date.getTime();
 }
 
-function makeZonedDateMs({ year, month, day, hour }, timeZone) {
-  const utcGuess = Date.UTC(year, month - 1, day, hour, 0, 0);
+function makeZonedDateMs({ year, month, day, hour, minute }, timeZone) {
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute || 0, 0);
   const offset = getTimeZoneOffsetMs(new Date(utcGuess), timeZone);
   return utcGuess - offset;
 }
@@ -127,6 +135,7 @@ function computeNextWindow(event, timeZone, nowMs) {
       month: event.month,
       day: event.day,
       hour: event.deliverAtHour,
+      minute: event.deliverAtMinute,
     },
     timeZone
   );
@@ -149,6 +158,7 @@ function computeNextWindow(event, timeZone, nowMs) {
       month: event.month,
       day: event.day,
       hour: event.deliverAtHour,
+      minute: event.deliverAtMinute,
     },
     timeZone
   );
@@ -167,6 +177,58 @@ function pickAvailableAt(windowStartMs, windowEndMs, nowMs) {
   const offset = Math.floor(Math.random() * (windowEndMs - windowStartMs));
   const candidate = windowStartMs + offset;
   return candidate < nowMs ? nowMs : candidate;
+}
+
+function serializeReply(reply) {
+  if (!reply) {
+    return null;
+  }
+
+  const bodyReady = typeof reply.body === "string" && reply.body.trim().length > 0;
+  const aiGenerated =
+    reply.status === REPLY_STATUS.WAITING
+      ? bodyReady
+      : reply.preview === AI_READY_PREVIEW;
+  const aiGenerationStatus = reply.status === REPLY_STATUS.WAITING
+    ? (bodyReady ? "generated_waiting_delivery" : "generating")
+    : (aiGenerated ? "delivered_ai" : "delivered_fallback");
+
+  return {
+    id: reply.id,
+    userId: reply.userId,
+    letterId: reply.letterId,
+    sourceType: reply.sourceType,
+    memorialProfileId: reply.memorialProfileId,
+    memorialEventId: reply.memorialEventId,
+    sourceLetterId: reply.sourceLetterId,
+    status: reply.status,
+    aiGenerated,
+    aiGenerationStatus,
+    createdAt: Number(reply.createdAtMs),
+    availableAt: Number(reply.availableAtMs),
+    subject: reply.subject,
+    preview: reply.preview,
+    body: reply.body,
+  };
+}
+
+async function findLatestLetterForProfile(profile) {
+  const letter = await Letter.findOne({
+    where: {
+      userId: profile.userId,
+      relation: profile.relation,
+    },
+    order: [["createdAtMs", "DESC"]],
+  });
+
+  if (letter) {
+    return letter;
+  }
+
+  return Letter.findOne({
+    where: { userId: profile.userId },
+    order: [["createdAtMs", "DESC"]],
+  });
 }
 
 async function listMemorialProfiles(userContext) {
@@ -309,10 +371,12 @@ async function createMemorialEvent(userContext, profileId, payload = {}) {
   const windowStartDays = Number(payload.windowStartDays ?? -1);
   const windowEndDays = Number(payload.windowEndDays ?? 1);
   const deliverAtHour = Number(payload.deliverAtHour ?? 9);
+  const deliverAtMinute = Number(payload.deliverAtMinute ?? 0);
   const enabled = payload.enabled !== undefined ? Boolean(payload.enabled) : true;
 
   ensureWindow(windowStartDays, windowEndDays);
   ensureHour(deliverAtHour);
+  ensureMinute(deliverAtMinute);
 
   const now = Date.now();
   const window = computeNextWindow(
@@ -320,6 +384,7 @@ async function createMemorialEvent(userContext, profileId, payload = {}) {
       month,
       day,
       deliverAtHour,
+      deliverAtMinute,
       windowStartDays,
       windowEndDays,
     },
@@ -337,6 +402,7 @@ async function createMemorialEvent(userContext, profileId, payload = {}) {
     windowStartDays,
     windowEndDays,
     deliverAtHour,
+    deliverAtMinute,
     enabled,
     nextTriggerAtMs: window.windowStartMs,
     lastTriggeredYear: 0,
@@ -395,6 +461,12 @@ async function updateMemorialEvent(userContext, eventId, payload = {}) {
     event.deliverAtHour = hour;
   }
 
+  if (payload.deliverAtMinute !== undefined) {
+    const minute = Number(payload.deliverAtMinute);
+    ensureMinute(minute);
+    event.deliverAtMinute = minute;
+  }
+
   if (payload.enabled !== undefined) {
     event.enabled = Boolean(payload.enabled);
   }
@@ -428,6 +500,72 @@ async function deleteMemorialEvent(userContext, eventId) {
   return { deleted: true };
 }
 
+async function createMemorialTestReply(userContext, profileId, payload = {}) {
+  const profile = await MemorialProfile.findOne({
+    where: { id: profileId, userId: userContext.userId, active: true },
+  });
+
+  if (!profile) {
+    throw new AppError(404, "Memorial profile not found");
+  }
+
+  const eventId = normalizeText(payload.eventId, 48);
+  if (!eventId) {
+    throw new AppError(400, "Memorial event is required for test delivery");
+  }
+
+  const event = await MemorialEvent.findOne({
+    where: {
+      id: eventId,
+      profileId: profile.id,
+    },
+  });
+
+  if (!event) {
+    throw new AppError(404, "Memorial event not found");
+  }
+
+  const sendAtMs = Number(payload.sendAtMs);
+  if (!Number.isFinite(sendAtMs)) {
+    throw new AppError(400, "Invalid test delivery time");
+  }
+
+  const now = Date.now();
+  if (sendAtMs < now + TEST_DELIVERY_MIN_LEAD_MS) {
+    throw new AppError(400, "Test delivery time must be at least one minute later");
+  }
+
+  const sourceLetter = await findLatestLetterForProfile(profile);
+  if (!sourceLetter) {
+    throw new AppError(400, "Write at least one letter before testing memorial delivery");
+  }
+
+  const waitingPayload = buildMemorialWaitingPayload(
+    profile,
+    event,
+    now,
+    sendAtMs
+  );
+
+  const reply = await Reply.create({
+    id: createId("reply"),
+    userId: profile.userId,
+    letterId: sourceLetter.id,
+    sourceType: MEMORIAL_SOURCE_TYPE.MEMORIAL,
+    memorialProfileId: profile.id,
+    memorialEventId: event.id,
+    sourceLetterId: sourceLetter.id,
+    status: REPLY_STATUS.WAITING,
+    createdAtMs: waitingPayload.createdAtMs,
+    availableAtMs: sendAtMs,
+    subject: waitingPayload.subject,
+    preview: "测试回响已经排进收件箱，会按你选的时刻送达。",
+    body: waitingPayload.body,
+  });
+
+  return serializeReply(reply);
+}
+
 async function triggerMemorialReplies() {
   const now = Date.now();
   const dueEvents = await MemorialEvent.findAll({
@@ -455,22 +593,7 @@ async function triggerMemorialReplies() {
       continue;
     }
 
-    const letter = await Letter.findOne({
-      where: {
-        userId: profile.userId,
-        relation: profile.relation,
-      },
-      order: [["createdAtMs", "DESC"]],
-    });
-
-    const fallbackLetter = letter
-      ? null
-      : await Letter.findOne({
-          where: { userId: profile.userId },
-          order: [["createdAtMs", "DESC"]],
-        });
-
-    const sourceLetter = letter || fallbackLetter;
+    const sourceLetter = await findLatestLetterForProfile(profile);
 
     if (!sourceLetter) {
       event.nextTriggerAtMs = now + RETRY_NO_LETTER_MS;
@@ -513,6 +636,7 @@ async function triggerMemorialReplies() {
         month: event.month,
         day: event.day,
         deliverAtHour: event.deliverAtHour,
+        deliverAtMinute: event.deliverAtMinute,
         windowStartDays: event.windowStartDays,
         windowEndDays: event.windowEndDays,
       },
@@ -544,5 +668,6 @@ module.exports = {
   createMemorialEvent,
   updateMemorialEvent,
   deleteMemorialEvent,
+  createMemorialTestReply,
   triggerMemorialReplies,
 };

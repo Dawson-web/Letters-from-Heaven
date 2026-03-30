@@ -272,6 +272,11 @@ const MemorialEvent = sequelize.define(
       allowNull: false,
       defaultValue: 9,
     },
+    deliverAtMinute: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
     enabled: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

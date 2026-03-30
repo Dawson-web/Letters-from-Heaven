@@ -118,8 +118,8 @@ const ReplyPage = observer(() => {
 
           <Text className='mt-5 block text-body text-charcoal'>
             {aiGenerated
-              ? `这封回响已经写好，大约会在 ${formatRemaining(reply.availableAt)} 后来到你面前。`
-              : `这封回响还在慢慢写成，预计 ${formatRemaining(reply.availableAt)}。`}
+              ? `这封回响已经写好，可能会在${formatRemaining(reply.availableAt)}来到你面前。`
+              : `这封回响还在慢慢写成，可能会在${formatRemaining(reply.availableAt)}来到你面前。`}
           </Text>
 
           <View className='mt-5 flex flex-col gap-2'>

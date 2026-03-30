@@ -8,11 +8,13 @@ const { resolveUserContext } = require("./user-context");
 const {
   clearMailbox,
   createLetter,
+  deleteReply,
   getMailbox,
   getReplyDetail,
   listLetters,
   listReplies,
   touchUser,
+  updateReply,
 } = require("./mailbox-service");
 const {
   listMemorialProfiles,
@@ -23,6 +25,7 @@ const {
   createMemorialEvent,
   updateMemorialEvent,
   deleteMemorialEvent,
+  createMemorialTestReply,
   triggerMemorialReplies,
 } = require("./memorial-service");
 
@@ -127,6 +130,14 @@ app.get("/api/replies/:id", requireUser, asyncHandler(async (req, res) => {
   sendSuccess(res, await getReplyDetail(req.userContext, req.params.id));
 }));
 
+app.patch("/api/replies/:id", requireUser, asyncHandler(async (req, res) => {
+  sendSuccess(res, await updateReply(req.userContext, req.params.id, req.body));
+}));
+
+app.delete("/api/replies/:id", requireUser, asyncHandler(async (req, res) => {
+  sendSuccess(res, await deleteReply(req.userContext, req.params.id));
+}));
+
 // 纪念档案
 app.get("/api/memorial-profiles", requireUser, asyncHandler(async (req, res) => {
   sendSuccess(res, await listMemorialProfiles(req.userContext));
@@ -159,6 +170,17 @@ app.post(
     sendSuccess(
       res,
       await createMemorialEvent(req.userContext, req.params.id, req.body)
+    );
+  })
+);
+
+app.post(
+  "/api/memorial-profiles/:id/test-delivery",
+  requireUser,
+  asyncHandler(async (req, res) => {
+    sendSuccess(
+      res,
+      await createMemorialTestReply(req.userContext, req.params.id, req.body)
     );
   })
 );

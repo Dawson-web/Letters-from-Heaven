@@ -19,16 +19,35 @@ export function formatRemaining(availableAt: number) {
 
   const totalMinutes = Math.ceil(diff / (60 * 1000))
 
+  if (totalMinutes <= 1) {
+    return '约 1 分钟后'
+  }
+
   if (totalMinutes < 60) {
-    return `约 ${totalMinutes} 分钟后抵达`
+    return `约 ${totalMinutes} 分钟后`
   }
 
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
+  const totalHours = diff / (60 * 60 * 1000)
 
-  if (minutes === 0) {
-    return `约 ${hours} 小时后抵达`
+  if (totalHours < 6) {
+    return '接下来的几个小时里'
   }
 
-  return `约 ${hours} 小时 ${minutes} 分钟后抵达`
+  if (totalHours < 18) {
+    return '今天晚些时候'
+  }
+
+  if (totalHours < 36) {
+    return '明天左右'
+  }
+
+  if (totalHours < 72) {
+    return '未来 1 到 2 天里'
+  }
+
+  if (totalHours < 144) {
+    return '这几天里'
+  }
+
+  return '晚一点的某一天'
 }

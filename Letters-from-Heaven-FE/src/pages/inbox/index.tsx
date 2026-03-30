@@ -1,5 +1,6 @@
-import { Text, View } from '@tarojs/components';
+import { Input, Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
+import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 
 import { ArcoButton } from '@/components/arco/button';
@@ -8,12 +9,18 @@ import { ArcoEmpty } from '@/components/arco/empty';
 import { LoadingState } from '@/components/arco/loading-state';
 import { ArcoNotice } from '@/components/arco/notice';
 import { PageShell } from '@/components/layout/page-shell';
+import { getErrorMessage } from '@/services/request';
 import { useRootStore } from '@/stores/root-store';
+import type { ReplyRecord } from '@/types/mail';
 import { cn } from '@/utils/cn';
 import { formatDateTime, formatRemaining } from '@/utils/time';
 
 const InboxPage = observer(() => {
   const { mailboxStore, memorialStore } = useRootStore();
+  const [editingReplyId, setEditingReplyId] = useState('');
+  const [subjectDraft, setSubjectDraft] = useState('');
+  const [savingReplyId, setSavingReplyId] = useState('');
+  const [deletingReplyId, setDeletingReplyId] = useState('');
 
   useDidShow(() => {
     void mailboxStore.refreshReplies();
@@ -38,19 +45,110 @@ const InboxPage = observer(() => {
     }
   };
 
+  const handleOpenReply = (replyId: string) => {
+    Taro.navigateTo({
+      url: `/pages/reply/index?id=${replyId}`,
+    });
+  };
+
+  const handleStartRename = (reply: ReplyRecord) => {
+    setEditingReplyId(reply.id);
+    setSubjectDraft(reply.subject);
+  };
+
+  const handleCancelRename = () => {
+    setEditingReplyId('');
+    setSubjectDraft('');
+    setSavingReplyId('');
+  };
+
+  const handleSaveRename = async (replyId: string) => {
+    const nextSubject = subjectDraft.trim();
+    if (!nextSubject) {
+      Taro.showToast({ title: '标题不能为空', icon: 'none' });
+      return;
+    }
+
+    setSavingReplyId(replyId);
+
+    try {
+      await mailboxStore.updateReplySubject(replyId, nextSubject);
+      Taro.showToast({ title: '标题已经改好了', icon: 'none' });
+      handleCancelRename();
+    } catch (error) {
+      Taro.showToast({ title: getErrorMessage(error), icon: 'none' });
+    } finally {
+      setSavingReplyId('');
+    }
+  };
+
+  const handleDeleteReply = async (reply: ReplyRecord) => {
+    const result = await Taro.showModal({
+      title: '要删除这封回响吗',
+      content: '删除后不能恢复，但原来的写信记录会继续保留。',
+    });
+
+    if (!result.confirm) {
+      return;
+    }
+
+    setDeletingReplyId(reply.id);
+
+    try {
+      await mailboxStore.deleteReply(reply.id);
+      if (editingReplyId === reply.id) {
+        handleCancelRename();
+      }
+      Taro.showToast({ title: '这封回响已经移出收件箱', icon: 'none' });
+    } catch (error) {
+      Taro.showToast({ title: getErrorMessage(error), icon: 'none' });
+    } finally {
+      setDeletingReplyId('');
+    }
+  };
+
+  const handleClearInbox = async () => {
+    const result = await Taro.showModal({
+      title: '要清空收件箱吗',
+      content: '这会删除当前账号下的所有回响和信件记录，而且不能恢复。',
+    });
+
+    if (!result.confirm) {
+      return;
+    }
+
+    try {
+      await mailboxStore.clearInboxItems();
+      handleCancelRename();
+      Taro.showToast({ title: '收件箱已经清空', icon: 'none' });
+    } catch (error) {
+      Taro.showToast({ title: getErrorMessage(error), icon: 'none' });
+    }
+  };
+
   return (
     <PageShell
       eyebrow='等待打开的那一刻'
       title='收件箱'
       subtitle='这里收着已经到来的，也收着还在路上的回应。'
       meta={(
-        <View className='page-shell-actions'>
+        <View className='page-shell-actions page-shell-actions--wrap'>
           <ArcoButton
             size='md'
             onClick={() => Taro.navigateTo({ url: '/pages/write/index' })}
           >
-            再写一封信
+            新建一封信
           </ArcoButton>
+          {mailboxStore.inboxItems.length > 0 ? (
+            <ArcoButton
+              variant='text'
+              size='md'
+              loading={mailboxStore.resetting}
+              onClick={handleClearInbox}
+            >
+              清空收件箱
+            </ArcoButton>
+          ) : null}
         </View>
       )}
     >
@@ -165,6 +263,7 @@ const InboxPage = observer(() => {
             : aiGenerated
               ? '回响已经写好，只等合适的时候来到你面前。'
               : '系统正顺着你的来信慢慢写回这封回应。';
+          const isEditing = editingReplyId === reply.id;
 
           return (
             <ArcoCard
@@ -173,11 +272,6 @@ const InboxPage = observer(() => {
               delay={Math.min(index + 2, 9)}
               tone={isReady ? 'default' : 'muted'}
               padding='md'
-              onClick={() =>
-                Taro.navigateTo({
-                  url: `/pages/reply/index?id=${reply.id}`,
-                })
-              }
             >
               <View className='inbox-mail-body'>
                 <View className='inbox-mail-head'>
@@ -210,17 +304,63 @@ const InboxPage = observer(() => {
                 </Text>
 
                 <View className='inbox-mail-footer'>
-                  <Text className='inbox-mail-action'>
-                    {isReady ? '慢慢打开' : aiGenerated ? '再等等它' : '先让它写完'}
-                  </Text>
-                  <Text className='inbox-mail-hint'>
-                    {isReady
-                      ? '它已经到了，想看的时候就打开。'
-                      : aiGenerated
-                        ? `已经写好，大约 ${formatRemaining(reply.availableAt)} 后会来到这里`
-                        : `大约 ${formatRemaining(reply.availableAt)} 后会来到这里`}
-                  </Text>
+                  <View className='inbox-mail-footer-copy'>
+                    <Text className='inbox-mail-action'>
+                      {isReady ? '慢慢打开' : aiGenerated ? '再等等它' : '先让它写完'}
+                    </Text>
+                    <Text className='inbox-mail-hint'>
+                      {isReady
+                        ? '它已经到了，想看的时候就打开。'
+                        : aiGenerated
+                          ? `已经写好，可能会在${formatRemaining(reply.availableAt)}来到这里`
+                          : `可能会在${formatRemaining(reply.availableAt)}来到这里`}
+                    </Text>
+                  </View>
+
+                  <View className='inbox-mail-actions'>
+                    <ArcoButton size='sm' onClick={() => handleOpenReply(reply.id)}>
+                      {isReady ? '打开信件' : '查看进度'}
+                    </ArcoButton>
+                    <ArcoButton variant='text' size='sm' onClick={() => handleStartRename(reply)}>
+                      改标题
+                    </ArcoButton>
+                    <ArcoButton
+                      variant='text'
+                      size='sm'
+                      className='text-terracotta'
+                      loading={deletingReplyId === reply.id}
+                      onClick={() => void handleDeleteReply(reply)}
+                    >
+                      删除
+                    </ArcoButton>
+                  </View>
                 </View>
+
+                {isEditing ? (
+                  <View className='inbox-mail-editor'>
+                    <Text className='inbox-mail-editor-label'>给这封回响换一个更好辨认的标题</Text>
+                    <Input
+                      className='field-control'
+                      maxlength={64}
+                      placeholder='例如：妈妈在生日这天的回响'
+                      placeholderStyle='color: #B5AB9C'
+                      value={subjectDraft}
+                      onInput={(event) => setSubjectDraft(event.detail.value)}
+                    />
+                    <View className='inbox-mail-actions inbox-mail-actions--editor'>
+                      <ArcoButton
+                        size='sm'
+                        loading={savingReplyId === reply.id}
+                        onClick={() => void handleSaveRename(reply.id)}
+                      >
+                        存好标题
+                      </ArcoButton>
+                      <ArcoButton variant='text' size='sm' onClick={handleCancelRename}>
+                        取消
+                      </ArcoButton>
+                    </View>
+                  </View>
+                ) : null}
               </View>
             </ArcoCard>
           );

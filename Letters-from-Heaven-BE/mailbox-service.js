@@ -86,6 +86,7 @@ function validateLetterPayload(payload = {}) {
   const body = normalizeText(payload.body, 800);
   const relation = normalizeText(payload.relation, 16);
   const signature = normalizeText(payload.signature, 16);
+  const testMode = payload.testMode === true;
 
   if (!relation || !RELATION_OPTIONS.includes(relation)) {
     throw new AppError(400, "Invalid relation", {
@@ -102,6 +103,7 @@ function validateLetterPayload(payload = {}) {
     body,
     relation,
     signature,
+    testMode,
   };
 }
 
@@ -196,7 +198,9 @@ async function createLetter(userContext, payload) {
   const now = Date.now();
   const letterId = createId("letter");
   const replyId = createId("reply");
-  const replyPayload = buildWaitingReplyPayload(input, now);
+  const replyPayload = buildWaitingReplyPayload(input, now, {
+    testMode: input.testMode,
+  });
 
   await touchUser(userContext);
   const aiBodySeed = await generateReplyBodyByAI(input);
@@ -344,6 +348,53 @@ async function clearMailbox(userContext) {
   });
 }
 
+async function updateReply(userContext, replyId, payload = {}) {
+  await touchUser(userContext);
+
+  const reply = await Reply.findOne({
+    where: {
+      id: replyId,
+      userId: userContext.userId,
+    },
+  });
+
+  if (!reply) {
+    throw new AppError(404, "Reply not found");
+  }
+
+  const subject = normalizeText(payload.subject, 64);
+  if (!subject) {
+    throw new AppError(400, "Reply subject is required");
+  }
+
+  reply.subject = subject;
+  await reply.save();
+
+  return serializeReply(reply);
+}
+
+async function deleteReply(userContext, replyId) {
+  await touchUser(userContext);
+
+  const reply = await Reply.findOne({
+    where: {
+      id: replyId,
+      userId: userContext.userId,
+    },
+  });
+
+  if (!reply) {
+    throw new AppError(404, "Reply not found");
+  }
+
+  await reply.destroy();
+
+  return {
+    deleted: true,
+    id: replyId,
+  };
+}
+
 module.exports = {
   createLetter,
   listLetters,
@@ -351,5 +402,7 @@ module.exports = {
   getReplyDetail,
   getMailbox,
   clearMailbox,
+  updateReply,
+  deleteReply,
   touchUser,
 };

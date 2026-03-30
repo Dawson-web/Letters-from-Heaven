@@ -1,4 +1,56 @@
-const { DEMO_REPLY_DELAY_MS, REPLY_STATUS } = require("./constants");
+const { REPLY_STATUS } = require("./constants");
+
+const HOUR_MS = 60 * 60 * 1000;
+const HALF_HOUR_MS = 30 * 60 * 1000;
+const TEST_REPLY_DELAY_MS = 90 * 1000;
+
+const LETTER_REPLY_DELAY_WINDOWS = [
+  {
+    weight: 0.35,
+    minMs: 4 * HOUR_MS,
+    maxMs: 12 * HOUR_MS,
+  },
+  {
+    weight: 0.4,
+    minMs: 18 * HOUR_MS,
+    maxMs: 36 * HOUR_MS,
+  },
+  {
+    weight: 0.25,
+    minMs: 2 * 24 * HOUR_MS,
+    maxMs: 5 * 24 * HOUR_MS,
+  },
+];
+
+function pickWeightedDelayWindow() {
+  const cursor = Math.random();
+  let total = 0;
+
+  for (const window of LETTER_REPLY_DELAY_WINDOWS) {
+    total += window.weight;
+    if (cursor <= total) {
+      return window;
+    }
+  }
+
+  return LETTER_REPLY_DELAY_WINDOWS[LETTER_REPLY_DELAY_WINDOWS.length - 1];
+}
+
+function roundUpToHalfHour(timestamp) {
+  return Math.ceil(timestamp / HALF_HOUR_MS) * HALF_HOUR_MS;
+}
+
+function pickLetterAvailableAt(now, options = {}) {
+  if (options.testMode) {
+    return now + TEST_REPLY_DELAY_MS;
+  }
+
+  const window = pickWeightedDelayWindow();
+  const span = Math.max(window.maxMs - window.minMs, 0);
+  const offset = span > 0 ? Math.random() * span : 0;
+
+  return roundUpToHalfHour(now + window.minMs + offset);
+}
 
 function excerpt(input) {
   const normalized = String(input || "")
@@ -78,13 +130,13 @@ function memorialLabel(event) {
   }
 }
 
-function buildWaitingReplyPayload(letterDraft, now) {
+function buildWaitingReplyPayload(letterDraft, now, options = {}) {
   return {
     status: REPLY_STATUS.WAITING,
     createdAtMs: now,
-    availableAtMs: now + DEMO_REPLY_DELAY_MS,
+    availableAtMs: pickLetterAvailableAt(now, options),
     subject: `${letterDraft.relation || "远方"}的回响`,
-    preview: "回响正在酝酿，会在一段时间后送达。",
+    preview: "回响已经启程，会在未来的某个时刻送达。",
     body: "",
   };
 }

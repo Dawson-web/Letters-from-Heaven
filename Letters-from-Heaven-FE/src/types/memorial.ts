@@ -23,6 +23,7 @@ export interface MemorialEvent {
   windowStartDays: number
   windowEndDays: number
   deliverAtHour: number
+  deliverAtMinute: number
   enabled: boolean
   nextTriggerAtMs: number
   lastTriggeredYear: number

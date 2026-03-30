@@ -106,6 +106,17 @@ const MIGRATIONS = [
       );
     },
   },
+  {
+    id: "20260330_memorial_event_minute_precision",
+    async up(sequelize) {
+      await addColumnIfMissing(
+        sequelize,
+        "memorial_events",
+        "deliverAtMinute",
+        "INT NOT NULL DEFAULT 0"
+      );
+    },
+  },
 ];
 
 async function ensureMigrationsTable(sequelize) {

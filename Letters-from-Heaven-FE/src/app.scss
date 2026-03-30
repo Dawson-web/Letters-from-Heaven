@@ -28,6 +28,17 @@
   --surface-border: rgba(222, 212, 199, 0.9);
   --radius-card: 32rpx;
   --radius-pill: 9999rpx;
+  --app-bg-image:
+    radial-gradient(circle at 12% 8%, rgba(255, 253, 248, 0.85), transparent 32%),
+    radial-gradient(circle at 84% 3%, rgba(233, 216, 191, 0.38), transparent 40%),
+    linear-gradient(180deg, rgba(255, 253, 248, 0.78) 0%, rgba(244, 239, 230, 0.95) 48%, rgba(244, 239, 230, 1) 100%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.09) 0,
+      rgba(255, 255, 255, 0.09) 2px,
+      transparent 2px,
+      transparent 10px
+    );
   --ease-calm: cubic-bezier(0.25, 0.1, 0.25, 1);
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
   --duration-fast: 160ms;
@@ -42,20 +53,16 @@ body,
 #app,
 .taro_page,
 taro-page-core,
-page {
+page,
+.page-shell {
   min-height: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
   background-color: var(--linen);
-  background-image:
-    radial-gradient(circle at 12% 8%, rgba(255, 253, 248, 0.85), transparent 32%),
-    radial-gradient(circle at 84% 3%, rgba(233, 216, 191, 0.38), transparent 40%),
-    linear-gradient(180deg, rgba(255, 253, 248, 0.78) 0%, rgba(244, 239, 230, 0.95) 48%, rgba(244, 239, 230, 1) 100%),
-    repeating-linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.09) 0,
-      rgba(255, 255, 255, 0.09) 2px,
-      transparent 2px,
-      transparent 10px
-    );
+  background-image: var(--app-bg-image);
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+  background-size: 100% 100%, 100% 100%, 100% 100%, auto;
+  background-position: center top, center top, center top, 0 0;
   background-blend-mode: screen, screen, normal, multiply;
 }
 
@@ -188,6 +195,10 @@ button::after,
   align-items: center;
   flex-wrap: wrap;
   gap: 16rpx;
+}
+
+.page-shell-actions--wrap {
+  justify-content: flex-end;
 }
 
 .page-shell-content {
@@ -476,6 +487,144 @@ button::after,
 .field-row--triple {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18rpx;
+}
+
+.field-row--double {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18rpx;
+}
+
+.picker-group-label {
+  display: block;
+  color: var(--ink);
+  font-size: 24rpx;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.picker-field {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 152rpx;
+  padding: 24rpx 26rpx;
+  border-radius: 26rpx;
+  border: 1px solid rgba(163, 144, 122, 0.24);
+  background: rgba(255, 253, 248, 0.78);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 8rpx 22rpx rgba(86, 68, 49, 0.08);
+  gap: 10rpx;
+}
+
+.picker-field--disabled {
+  opacity: 0.72;
+}
+
+.picker-field-label {
+  display: block;
+  color: var(--stone);
+  font-size: 22rpx;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.picker-field-value {
+  display: block;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 40rpx;
+  line-height: 1.12;
+}
+
+.picker-field-note {
+  display: block;
+  color: var(--driftwood);
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.picker-field-input {
+  width: 100%;
+  min-height: 48rpx;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 30rpx;
+  line-height: 1.5;
+}
+
+.picker-field-input:focus {
+  outline: none;
+}
+
+.window-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.memorial-event-spotlight {
+  margin-top: 28rpx;
+  padding: 28rpx 30rpx;
+  border-radius: 30rpx;
+  border: 1px solid rgba(177, 72, 60, 0.16);
+  background:
+    radial-gradient(circle at 84% 20%, rgba(177, 72, 60, 0.08), transparent 28%),
+    linear-gradient(165deg, rgba(255, 253, 248, 0.98) 0%, rgba(245, 236, 225, 0.96) 100%);
+}
+
+.memorial-event-spotlight-kicker {
+  display: block;
+  color: var(--terracotta);
+  font-size: 22rpx;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.memorial-event-spotlight-title {
+  display: block;
+  margin-top: 16rpx;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 50rpx;
+  line-height: 1.08;
+}
+
+.memorial-event-spotlight-copy {
+  display: block;
+  margin-top: 14rpx;
+  color: var(--driftwood);
+  font-size: 25rpx;
+  line-height: 1.62;
+}
+
+.memorial-event-card {
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.9) 0%, rgba(247, 241, 232, 0.94) 100%);
+}
+
+.memorial-test-summary {
+  padding: 24rpx 26rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 252, 246, 0.7);
+  border: 1px dashed rgba(163, 144, 122, 0.34);
+}
+
+.memorial-test-summary-title {
+  display: block;
+  color: var(--ink);
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.memorial-test-summary-copy {
+  display: block;
+  margin-top: 10rpx;
+  color: var(--driftwood);
+  font-size: 24rpx;
+  line-height: 1.64;
 }
 
 .relation-select-block {
@@ -1152,11 +1301,17 @@ button::after,
 
 .inbox-mail-footer {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 18rpx;
   padding-top: 18rpx;
   border-top: 1px solid rgba(163, 144, 122, 0.18);
+}
+
+.inbox-mail-footer-copy {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18rpx;
 }
 
 .inbox-mail-action {
@@ -1173,6 +1328,31 @@ button::after,
   font-size: 22rpx;
   line-height: 1.6;
   text-align: right;
+}
+
+.inbox-mail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.inbox-mail-actions .arco-button {
+  width: auto;
+}
+
+.inbox-mail-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  padding-top: 18rpx;
+  border-top: 1px dashed rgba(163, 144, 122, 0.28);
+}
+
+.inbox-mail-editor-label {
+  display: block;
+  color: var(--stone);
+  font-size: 22rpx;
+  line-height: 1.6;
 }
 
 .empty-state {
@@ -2678,13 +2858,22 @@ button::after,
 
   .inbox-mail-footer {
     flex-direction: column;
-    align-items: flex-start;
   }
 
   .inbox-mail-hint {
     text-align: left;
   }
 
+  .inbox-mail-footer-copy {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .inbox-mail-actions .arco-button {
+    width: 100%;
+  }
+
+  .field-row--double,
   .field-row--triple {
     grid-template-columns: 1fr;
   }

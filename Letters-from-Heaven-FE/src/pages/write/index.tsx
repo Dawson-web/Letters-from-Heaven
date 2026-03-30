@@ -18,6 +18,7 @@ import { useRootStore } from '@/stores/root-store';
 
 const CUSTOM_RELATION_STORAGE_KEY = 'yunduan-huixin-custom-relations';
 const CUSTOM_RELATION_PICKER_ACTION = '+ 添加自定义称呼';
+const SHOW_TEST_SEND_BUTTON = process.env.NODE_ENV !== 'production';
 
 function normalizeRelationInput(value: string) {
   return value.replace(/\s+/g, ' ').trim();
@@ -46,6 +47,7 @@ const WritePage = observer(() => {
   const [showCustomRelationInput, setShowCustomRelationInput] = useState(false);
   const [signature, setSignature] = useState(mailboxStore.draft.signature);
   const [sending, setSending] = useState(false);
+  const [sendingMode, setSendingMode] = useState<'normal' | 'test' | null>(null);
   const [sendError, setSendError] = useState('');
   const [showSendAnim, setShowSendAnim] = useState(false);
   const [pendingReplyId, setPendingReplyId] = useState('');
@@ -103,13 +105,14 @@ const WritePage = observer(() => {
     );
   }
 
-  const handleSend = async () => {
+  const handleSend = async (mode: 'normal' | 'test' = 'normal') => {
     if (!canSend || sending) {
       return;
     }
 
     setSendError('');
     setSending(true);
+    setSendingMode(mode);
 
     try {
       await new Promise((resolve) => setTimeout(resolve, 300));
@@ -119,12 +122,15 @@ const WritePage = observer(() => {
         body: body.trim(),
         relation,
         signature: signature.trim(),
+      }, {
+        testMode: mode === 'test',
       });
 
       setPendingReplyId(reply.id);
       setShowSendAnim(true);
     } catch (error) {
       setSending(false);
+      setSendingMode(null);
       setSendError(getErrorMessage(error));
       Taro.showToast({
         title: getErrorMessage(error),
@@ -205,14 +211,37 @@ const WritePage = observer(() => {
       subtitle='不需要完整，也不用着急，把最先浮上来的那句话放在这里就好。'
       footer={(
         <View className='sticky-cta-stack'>
-          <ArcoButton disabled={!canSend} loading={sending} onClick={handleSend} className='w-full' size='lg'>
-            {sending ? '正在把这封信送出去' : '把这封信轻轻寄出'}
+          <ArcoButton
+            disabled={!canSend}
+            loading={sending && sendingMode === 'normal'}
+            onClick={() => void handleSend('normal')}
+            className='w-full'
+            size='lg'
+          >
+            {sending && sendingMode === 'normal' ? '正在把这封信送出去' : '把这封信轻轻寄出'}
           </ArcoButton>
+          {SHOW_TEST_SEND_BUTTON ? (
+            <ArcoButton
+              variant='outline'
+              disabled={!canSend}
+              loading={sending && sendingMode === 'test'}
+              onClick={() => void handleSend('test')}
+              className='w-full'
+              size='lg'
+            >
+              {sending && sendingMode === 'test' ? '测试投递中（90秒回信）' : '测试发送（90秒回信）'}
+            </ArcoButton>
+          ) : null}
           <Text className='text-center text-caption text-driftwood'>
             {wordCount < wordMin
               ? `再写 ${remaining} 个字，这封信就可以慢慢寄出了`
               : `已经写下 ${wordCount} 个字，想寄出的时候就寄出`}
           </Text>
+          {SHOW_TEST_SEND_BUTTON ? (
+            <Text className='text-center text-caption text-fog'>
+              测试发送仅用于联调：回响会在 90 秒后送达。
+            </Text>
+          ) : null}
         </View>
       )}
     >

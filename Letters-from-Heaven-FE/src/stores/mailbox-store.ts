@@ -5,15 +5,18 @@ import { EMPTY_DRAFT } from '@/constants/relations'
 import {
   clearMailbox as clearMailboxRequest,
   createLetter as createLetterRequest,
+  deleteReply as deleteReplyRequest,
   fetchMailbox,
   fetchReplyDetail,
+  updateReply as updateReplyRequest,
 } from '@/services/mailbox'
 import { getErrorMessage } from '@/services/request'
 import type {
   LetterDraft,
   LetterRecord,
   PersistedMailboxState,
-  ReplyRecord
+  ReplyRecord,
+  SendLetterOptions,
 } from '@/types/mail'
 
 const STORAGE_KEY = 'yunduan-huixin-mailbox'
@@ -151,7 +154,7 @@ export class MailboxStore {
     }
   }
 
-  async sendLetter(payload: LetterDraft) {
+  async sendLetter(payload: LetterDraft, options: SendLetterOptions = {}) {
     if (this.sending) {
       throw new Error('这封信还在投递中，请再等一会儿')
     }
@@ -159,7 +162,10 @@ export class MailboxStore {
     this.sending = true
 
     try {
-      const result = await createLetterRequest(payload)
+      const requestPayload = options.testMode
+        ? { ...payload, testMode: true }
+        : payload
+      const result = await createLetterRequest(requestPayload)
 
       runInAction(() => {
         this.upsertLetter(result.letter)
@@ -232,6 +238,28 @@ export class MailboxStore {
     return this.letters.find((item) => item.id === letterId)
   }
 
+  async updateReplySubject(id: string, subject: string) {
+    const reply = await updateReplyRequest(id, { subject })
+
+    runInAction(() => {
+      this.upsertReply(reply)
+      this.lastError = ''
+      this.persist()
+    })
+
+    return reply
+  }
+
+  async deleteReply(id: string) {
+    await deleteReplyRequest(id)
+
+    runInAction(() => {
+      this.replies = this.replies.filter((item) => item.id !== id)
+      this.lastError = ''
+      this.persist()
+    })
+  }
+
   clearLocalState() {
     this.boundaryAccepted = false
     this.draft = { ...EMPTY_DRAFT }
@@ -243,6 +271,31 @@ export class MailboxStore {
 
   resetAll() {
     return this.clearAll()
+  }
+
+  async clearInboxItems() {
+    this.resetting = true
+
+    try {
+      await clearMailboxRequest()
+
+      runInAction(() => {
+        this.letters = []
+        this.replies = []
+        this.lastError = ''
+        this.persist()
+      })
+    } catch (error) {
+      runInAction(() => {
+        this.lastError = getErrorMessage(error)
+      })
+
+      throw error
+    } finally {
+      runInAction(() => {
+        this.resetting = false
+      })
+    }
   }
 
   async clearAll() {

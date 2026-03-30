@@ -18,5 +18,3 @@ export const EMPTY_DRAFT: LetterDraft = {
   relation: '',
   signature: ''
 }
-
-export const DEMO_REPLY_DELAY_MS = 90 * 1000

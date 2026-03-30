@@ -1,3 +1,4 @@
+import type { ReplyRecord } from '@/types/mail'
 import type { MemorialEvent, MemorialProfile } from '@/types/memorial'
 
 import { apiRequest } from '@/services/request'
@@ -57,5 +58,18 @@ export function deleteMemorialEvent(id: string) {
   return apiRequest<{ deleted: boolean }>({
     path: `/api/memorial-events/${id}`,
     method: 'DELETE',
+  })
+}
+
+export interface MemorialTestDeliveryPayload {
+  eventId: string
+  sendAtMs: number
+}
+
+export function sendMemorialTestDelivery(profileId: string, payload: MemorialTestDeliveryPayload) {
+  return apiRequest<ReplyRecord, MemorialTestDeliveryPayload>({
+    path: `/api/memorial-profiles/${profileId}/test-delivery`,
+    method: 'POST',
+    data: payload,
   })
 }

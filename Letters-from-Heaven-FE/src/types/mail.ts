@@ -19,6 +19,10 @@ export interface LetterDraft {
   signature: string
 }
 
+export interface SendLetterOptions {
+  testMode?: boolean
+}
+
 export interface LetterRecord extends LetterDraft {
   id: string
   createdAt: number

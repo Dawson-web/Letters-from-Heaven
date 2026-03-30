@@ -88,11 +88,11 @@ const SentPage = observer(() => {
 
       <ArcoCard tone='emphasis' padding='lg' delay={1}>
         <SectionHeading
-          eyebrow='预计抵达'
+          eyebrow='大致会在'
           title={reply ? formatRemaining(reply.availableAt) : '请稍后去收件箱查看'}
           description={aiGenerated
-            ? '回响已经写好，现在只等它按约定的时间来到。'
-            : '系统正在顺着你的来信慢慢写回这封回应。'}
+            ? '回响已经写好，但它不会立刻出现，会按自己的节奏慢慢来到。'
+            : '系统正在顺着你的来信慢慢写回这封回应，送达时间也会留一点自然的缓冲。'}
         />
       </ArcoCard>
 

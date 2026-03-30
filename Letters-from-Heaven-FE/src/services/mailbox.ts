@@ -24,14 +24,23 @@ export interface ClearMailboxPayload {
   deletedReplies: number
 }
 
+export interface DeleteReplyPayload {
+  deleted: boolean
+  id: string
+}
+
+export interface CreateLetterRequest extends LetterDraft {
+  testMode?: boolean
+}
+
 export function fetchMailbox() {
   return apiRequest<MailboxPayload>({
     path: '/api/mailbox',
   })
 }
 
-export function createLetter(payload: LetterDraft) {
-  return apiRequest<CreateLetterPayload, LetterDraft>({
+export function createLetter(payload: CreateLetterRequest) {
+  return apiRequest<CreateLetterPayload, CreateLetterRequest>({
     path: '/api/letters',
     method: 'POST',
     data: payload,
@@ -41,6 +50,21 @@ export function createLetter(payload: LetterDraft) {
 export function fetchReplyDetail(replyId: string) {
   return apiRequest<ReplyDetailPayload>({
     path: `/api/replies/${replyId}`,
+  })
+}
+
+export function updateReply(replyId: string, payload: Pick<ReplyRecord, 'subject'>) {
+  return apiRequest<ReplyRecord, Pick<ReplyRecord, 'subject'>>({
+    path: `/api/replies/${replyId}`,
+    method: 'PATCH',
+    data: payload,
+  })
+}
+
+export function deleteReply(replyId: string) {
+  return apiRequest<DeleteReplyPayload>({
+    path: `/api/replies/${replyId}`,
+    method: 'DELETE',
   })
 }
 

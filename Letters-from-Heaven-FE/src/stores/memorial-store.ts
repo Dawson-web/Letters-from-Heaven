@@ -7,10 +7,12 @@ import {
   deleteMemorialProfile,
   fetchMemorialEvents,
   fetchMemorialProfiles,
+  sendMemorialTestDelivery,
   updateMemorialEvent,
   updateMemorialProfile,
 } from '@/services/memorial'
 import { getErrorMessage } from '@/services/request'
+import type { ReplyRecord } from '@/types/mail'
 import type { MemorialEvent, MemorialProfile } from '@/types/memorial'
 
 export class MemorialStore {
@@ -134,6 +136,13 @@ export class MemorialStore {
     runInAction(() => {
       const list = this.eventsByProfile[event.profileId] || []
       this.eventsByProfile[event.profileId] = list.filter((item) => item.id !== eventId)
+    })
+  }
+
+  async testEventDelivery(profileId: string, eventId: string, sendAtMs: number): Promise<ReplyRecord> {
+    return sendMemorialTestDelivery(profileId, {
+      eventId,
+      sendAtMs,
     })
   }
 }

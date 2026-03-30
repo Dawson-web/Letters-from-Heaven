@@ -21,7 +21,7 @@ export function BoundaryConfirmSheet({ onConfirm }: BoundaryConfirmSheetProps) {
           这里的回响由 AI 生成，用来陪你把思念安放下来，不代表逝者真实态度，也不能还原真实关系。
         </Text>
         <Text className='boundary-confirm-copy'>
-          体验版的回响大约会在 90 秒后抵达。之后也可以按纪念日、生日这些更从容的节奏送达。
+          回响不会立刻抵达。它可能在今天晚些时候、明天，或者未来几天里的某个时刻来到。
         </Text>
         <Text className='boundary-confirm-note'>
           如果你正处在强烈哀伤或危机场景里，也请把真实的人和支持渠道放在更前面。
