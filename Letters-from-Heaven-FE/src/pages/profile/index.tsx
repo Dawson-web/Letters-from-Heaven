@@ -4,7 +4,6 @@ import { observer } from 'mobx-react-lite';
 
 import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
-import { ArcoNotice } from '@/components/arco/notice';
 import { SectionHeading } from '@/components/arco/section-heading';
 import { PageShell } from '@/components/layout/page-shell';
 import { getErrorMessage } from '@/services/request';
@@ -67,12 +66,6 @@ const ProfilePage = observer(() => {
           </View>
         </View>
       </ArcoCard>
-
-      <ArcoNotice
-        tone='warning'
-        title='也请记得这条边界'
-        description='回响由 AI 生成，用来陪你安放情绪与思念。它不代表逝者真实态度；如果你正处在强烈哀伤或危机场景里，也请把真实的人和支持渠道放在更前面。'
-      />
 
       <ArcoCard tone='muted' padding='lg' delay={2}>
         <SectionHeading

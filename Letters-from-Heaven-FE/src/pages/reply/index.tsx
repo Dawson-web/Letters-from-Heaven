@@ -9,7 +9,6 @@ import { ArcoCard } from '@/components/arco/card';
 import { ArcoEmpty } from '@/components/arco/empty';
 import { LetterPaper } from '@/components/arco/letter-paper';
 import { LoadingState } from '@/components/arco/loading-state';
-import { ArcoNotice } from '@/components/arco/notice';
 import { SectionHeading } from '@/components/arco/section-heading';
 import { PageShell } from '@/components/layout/page-shell';
 import { useRootStore } from '@/stores/root-store';
@@ -130,12 +129,6 @@ const ReplyPage = observer(() => {
           </View>
         </ArcoCard>
 
-        <ArcoNotice
-          title='等待也算一种回音'
-          description={aiGenerated
-            ? '回信已经写好，但会继续保留送达延迟，让你打开它的时候，仍然像收到一封真正走过路程的信。'
-            : '系统会先完成 AI 生成，再把这段时间差留住，让“回响”更像一封真正经历了路途的信。'}
-        />
       </PageShell>
     );
   }
@@ -214,11 +207,6 @@ const ReplyPage = observer(() => {
         </View>
       </LetterPaper>
 
-      <ArcoNotice
-        tone='warning'
-        title='也请轻轻记得这条边界'
-        description='这封回响是在陪你安放思念，不是在替任何人给出真实回答。'
-      />
     </PageShell>
   );
 });

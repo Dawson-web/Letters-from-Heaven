@@ -6,7 +6,6 @@ import { observer } from 'mobx-react-lite';
 import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
 import { FormField } from '@/components/arco/form-field';
-import { ArcoNotice } from '@/components/arco/notice';
 import { SectionHeading } from '@/components/arco/section-heading';
 import { ArcoTag } from '@/components/arco/tag';
 import { PageShell } from '@/components/layout/page-shell';
@@ -467,12 +466,6 @@ const MemorialEditPage = observer(() => {
         </View>
       </ArcoCard>
 
-      <ArcoNotice
-        tone='warning'
-        title='也请记得这条边界'
-        description='纪念回响由系统生成，用来陪你安放思念，不代表逝者真实态度，也不能替代真实的人。'
-      />
-
       <ArcoCard tone='muted' padding='lg' delay={3}>
         <SectionHeading
           eyebrow='纪念日设置'
@@ -781,11 +774,6 @@ const MemorialEditPage = observer(() => {
                 </View>
               </Picker>
             </View>
-
-            <ArcoNotice
-              title='测试按钮会做什么'
-              description='它会按你选的精确时刻创建一封等待中的纪念回响。你可以立刻去收件箱检查等待态和送达后的展示。'
-            />
 
             <View className='sticky-cta-stack'>
               <ArcoButton

@@ -293,11 +293,6 @@ const WritePage = observer(() => {
         </View>
       </ArcoCard>
 
-      <ArcoNotice
-        title='寄出之后，回响会自己慢慢写好'
-        description='你不用再做什么。系统会顺着这封来信写回回应，并在约定的时刻把它送到你面前。'
-      />
-
       <LetterPaper variant='hero' className='letter-paper--form'>
         <FormField
           label='这封信想叫什么'

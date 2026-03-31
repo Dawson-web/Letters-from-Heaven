@@ -6,7 +6,6 @@ import { LottiePlayer } from '@/components/animation/lottie-player';
 import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
 import { LoadingState } from '@/components/arco/loading-state';
-import { ArcoNotice } from '@/components/arco/notice';
 import { SectionHeading } from '@/components/arco/section-heading';
 import { PageShell } from '@/components/layout/page-shell';
 import { useRootStore } from '@/stores/root-store';
@@ -96,12 +95,6 @@ const SentPage = observer(() => {
         />
       </ArcoCard>
 
-      <ArcoNotice
-        title={aiGenerated ? '回响已经写好，等它自然来到' : '现在可以先去做点别的'}
-        description={aiGenerated
-          ? '最好的打开方式通常不是提前惦记它，而是等它自己按时来到。'
-          : '最合适的等待，往往不是盯着倒计时，而是把这一小段时间还给自己。'}
-      />
     </PageShell>
   );
 });
