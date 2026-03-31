@@ -81,6 +81,52 @@ function serializeReply(reply) {
   };
 }
 
+function memorialEventLabel(event) {
+  switch (event?.type) {
+    case "qingming":
+      return "清明回响";
+    case "birthday":
+      return "生日回响";
+    case "anniversary":
+      return "周年回响";
+    default:
+      return normalizeText(event?.label, 32) || "纪念回响";
+  }
+}
+
+function buildMemorialAIDraft(profile, event, sourceLetter) {
+  const relation =
+    normalizeText(profile?.relation, 16) ||
+    normalizeText(sourceLetter?.relation, 16) ||
+    "远方";
+  const displayName =
+    normalizeText(profile?.displayName, 32) ||
+    normalizeText(profile?.relation, 16) ||
+    "远方";
+  const label = memorialEventLabel(event);
+
+  const contextBlocks = [
+    `这是一次纪念回响，场景：${label}。`,
+    sourceLetter?.body
+      ? `最近一次来信：${normalizeText(sourceLetter.body, 1000)}`
+      : "",
+    profile?.keywords
+      ? `记忆线索：${normalizeText(profile.keywords, 128)}`
+      : "",
+    profile?.note
+      ? `补充记忆：${normalizeText(profile.note, 400)}`
+      : "",
+    "请围绕这个纪念日场景写回信，情绪上以陪伴和安放思念为主。",
+  ];
+
+  return {
+    relation,
+    title: `${displayName} · ${label}`,
+    body: contextBlocks.filter(Boolean).join("\n"),
+    signature: normalizeText(sourceLetter?.signature, 16) || displayName,
+  };
+}
+
 function validateLetterPayload(payload = {}) {
   const title = normalizeText(payload.title, 32);
   const body = normalizeText(payload.body, 800);
@@ -153,10 +199,17 @@ async function settleReply(reply, letter) {
       return reply;
     }
 
+    const memorialAIDraft = buildMemorialAIDraft(
+      memorialProfile,
+      memorialEvent,
+      sourceLetter
+    );
+    const aiBody = reply.body || (await generateReplyBodyByAI(memorialAIDraft));
     const readyPayload = buildMemorialReadyPayload(
       memorialProfile,
       sourceLetter,
-      memorialEvent
+      memorialEvent,
+      { aiBody }
     );
     reply.status = readyPayload.status;
     reply.subject = readyPayload.subject;

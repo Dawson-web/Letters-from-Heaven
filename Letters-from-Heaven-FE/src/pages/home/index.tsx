@@ -50,13 +50,10 @@ const HomePage = observer(() => {
       className='home-page-shell'
       headerClassName='home-page-header'
       title='云端回信'
-      subtitle='把没说完的话，先放在这里。'
+      subtitle='把没说完的话，先放在这里，慢慢来，也来得及。'
       hero={(
         <View className={cn('hero-poster anim-scale-in', hasEntryGate && 'opacity-50')}>
           <View className='hero-poster-copy'>
-            <Text className='hero-poster-kicker'>慢慢来，也来得及</Text>
-            <Text className='hero-poster-title'>写给想念的人，先从一句话开始。</Text>
-            <Text className='hero-poster-description'>你现在写下的，会在合适的时候变成回响。</Text>
             <View className='hero-poster-actions'>
               <ArcoButton
                 size='lg'
@@ -125,8 +122,8 @@ const HomePage = observer(() => {
 
       <ArcoCard tone='muted' padding='lg' delay={2}>
         <SectionHeading
-          eyebrow='快速入口'
-          title='你要去的页面，都可以从这里直接进入'
+          eyebrow=''
+          title=''
           description='把常用页面放在首页，省去来回翻找。'
         />
         <View className='home-entry-grid'>

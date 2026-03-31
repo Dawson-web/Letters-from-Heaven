@@ -3,6 +3,7 @@ const { REPLY_STATUS } = require("./constants");
 const HOUR_MS = 60 * 60 * 1000;
 const HALF_HOUR_MS = 30 * 60 * 1000;
 const TEST_REPLY_DELAY_MS = 90 * 1000;
+const AI_READY_PREVIEW = "你的来信已收到，回响已生成。";
 
 const LETTER_REPLY_DELAY_WINDOWS = [
   {
@@ -176,10 +177,10 @@ function buildMemorialWaitingPayload(profile, event, now, availableAtMs) {
   };
 }
 
-function buildMemorialReadyPayload(profile, letter, event) {
+function buildMemorialReadyPayload(profile, letter, event, options = {}) {
   const greeting = greetingFor(profile?.relation);
   const label = memorialLabel(event);
-  const body = [
+  const fallbackBody = [
     `${greeting}：`,
     `在${label}这天，我看见你想起了“${memorialExcerpt(profile, letter)}”。`,
     comfortFor(profile?.relation),
@@ -188,11 +189,13 @@ function buildMemorialReadyPayload(profile, letter, event) {
       ? `你一直记得“${profile.displayName}”。`
       : "你一直记得那些重要的名字。",
   ].join("\n\n");
+  const aiBody = normalizeBody(options.aiBody);
+  const body = aiBody || fallbackBody;
 
   return {
     status: REPLY_STATUS.READY,
     subject: `${profile?.displayName || profile?.relation || "远方"} · ${label}`,
-    preview: "这份纪念已被认真接住。",
+    preview: aiBody ? AI_READY_PREVIEW : "这份纪念已被认真接住。",
     body,
   };
 }
