@@ -22,6 +22,7 @@ const HomePage = observer(() => {
   const [pickedOn, setPickedOn] = useState('');
   const [loadingFeatured, setLoadingFeatured] = useState(true);
   const [featuredError, setFeaturedError] = useState('');
+  const featuredExcerpt = featuredLetter?.excerpt.replace(/\s+/g, ' ').trim() || '';
 
   const refreshFeaturedLetter = async () => {
     setLoadingFeatured(true);
@@ -120,10 +121,11 @@ const HomePage = observer(() => {
 
             <View className='daily-letter-paper'>
               <View className='daily-letter-paper-head'>
-                <Text className='daily-letter-badge'>匿名收录</Text>
                 {pickedOn ? <Text className='daily-letter-date'>{pickedOn}</Text> : null}
               </View>
-              <Text className='daily-letter-excerpt'>“{featuredLetter.excerpt}”</Text>
+              <View className='daily-letter-paper-body'>
+                <Text className='daily-letter-excerpt'>“{featuredExcerpt}”</Text>
+              </View>
               <Text className='daily-letter-relation'>这是一封写给{featuredLetter.relation || '远方'}的信</Text>
             </View>
 
@@ -142,8 +144,7 @@ const HomePage = observer(() => {
         ) : (
           <View className='daily-letter-empty'>
             <SectionHeading
-              eyebrow='今日共鸣'
-              title='今天的首页，还在等第一封愿意被轻轻读到的信'
+              title='今日共鸣'
               description={
                 featuredError
                   ? `推荐内容暂时没有加载出来：${featuredError}`

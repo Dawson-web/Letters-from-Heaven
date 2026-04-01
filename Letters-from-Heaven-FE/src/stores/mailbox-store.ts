@@ -309,10 +309,13 @@ export class MailboxStore {
   }
 
   async deleteReply(id: string) {
-    await deleteReplyRequest(id)
+    const result = await deleteReplyRequest(id)
 
     runInAction(() => {
       this.replies = this.replies.filter((item) => item.id !== id)
+      if (result.deletedLetterId) {
+        this.letters = this.letters.filter((item) => item.id !== result.deletedLetterId)
+      }
       this.lastError = ''
       this.persist()
     })

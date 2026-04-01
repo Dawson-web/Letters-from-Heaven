@@ -323,7 +323,6 @@ const InboxPage = observer(() => {
           const aiGenerated = typeof reply.aiGenerated === 'boolean'
             ? reply.aiGenerated
             : (isReady ? reply.preview === '你的来信已收到，回响已生成。' : hasGeneratedBody);
-          const aiGenerating = !isReady && !aiGenerated;
           const stamp = formatDateTime(reply.createdAt).slice(5, 10).replace('-', '.');
           const memorialLabel = reply.sourceType === 'memorial'
             ? getMemorialLabel(reply.memorialEventId)
@@ -348,9 +347,6 @@ const InboxPage = observer(() => {
                   <View className='inbox-mail-head-main'>
                     <View className='status-inline inbox-mail-status'>
                       <View className={isReady ? 'dot-ready' : 'dot-waiting'} />
-                      <Text className='text-overline text-driftwood'>
-                        {isReady ? (aiGenerated ? 'AI 回响已抵达' : '系统回响已抵达') : aiGenerated ? 'AI 已写好，等它到来' : 'AI 正在写回'}
-                      </Text>
                     </View>
                     <Text className='inbox-mail-subject'>{reply.subject}</Text>
                   </View>
@@ -363,9 +359,6 @@ const InboxPage = observer(() => {
                   </Text>
                   <View className='flex items-center gap-2'>
                     <Text className='inbox-mail-chip'>{memorialLabel}</Text>
-                    <Text className='inbox-mail-chip'>
-                      {aiGenerated ? 'AI 生成' : aiGenerating ? 'AI 生成中' : '系统模板'}
-                    </Text>
                     {reply.favorite ? (
                       <Text className='inbox-mail-chip'>已收藏</Text>
                     ) : null}

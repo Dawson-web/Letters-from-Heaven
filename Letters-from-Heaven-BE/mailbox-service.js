@@ -184,7 +184,7 @@ function serializeFeaturedLetter(letter) {
     id: letter.id,
     relation: normalizeText(letter.relation, 16) || "远方",
     headline: buildPublicHeadline(letter.relation),
-    excerpt: normalizeText(letter.publicExcerpt, 255),
+    excerpt: normalizeInlineText(letter.publicExcerpt, 255),
     createdAt: Number(letter.createdAtMs),
   };
 }
@@ -815,12 +815,58 @@ async function deleteReply(userContext, replyId) {
     throw new AppError(404, "Reply not found");
   }
 
-  await reply.destroy();
+  const sourceLetterId = reply.sourceLetterId || reply.letterId;
 
-  return {
-    deleted: true,
-    id: replyId,
-  };
+  return sequelize.transaction(async (transaction) => {
+    await reply.destroy({ transaction });
+
+    let deletedLetterId = null;
+    let removedFromFeatured = false;
+
+    if (reply.sourceType === MEMORIAL_SOURCE_TYPE.LETTER && sourceLetterId) {
+      const remainingReplies = await Reply.count({
+        where: {
+          userId: userContext.userId,
+          letterId: sourceLetterId,
+        },
+        transaction,
+      });
+
+      if (remainingReplies === 0) {
+        await Letter.destroy({
+          where: {
+            id: sourceLetterId,
+            userId: userContext.userId,
+          },
+          transaction,
+        });
+        deletedLetterId = sourceLetterId;
+        removedFromFeatured = true;
+      } else {
+        await Letter.update(
+          {
+            publicConsent: false,
+            publicExcerpt: "",
+          },
+          {
+            where: {
+              id: sourceLetterId,
+              userId: userContext.userId,
+            },
+            transaction,
+          }
+        );
+        removedFromFeatured = true;
+      }
+    }
+
+    return {
+      deleted: true,
+      id: replyId,
+      deletedLetterId,
+      removedFromFeatured,
+    };
+  });
 }
 
 module.exports = {

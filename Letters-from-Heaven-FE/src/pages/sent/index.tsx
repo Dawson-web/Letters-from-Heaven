@@ -1,15 +1,12 @@
-import { Text, View } from '@tarojs/components';
+import { View } from '@tarojs/components';
 import Taro, { useDidShow, useRouter } from '@tarojs/taro';
 import { observer } from 'mobx-react-lite';
 
 import { LottiePlayer } from '@/components/animation/lottie-player';
 import { ArcoButton } from '@/components/arco/button';
-import { ArcoCard } from '@/components/arco/card';
 import { LoadingState } from '@/components/arco/loading-state';
-import { SectionHeading } from '@/components/arco/section-heading';
 import { PageShell } from '@/components/layout/page-shell';
 import { useRootStore } from '@/stores/root-store';
-import { formatRemaining } from '@/utils/time';
 
 const SentPage = observer(() => {
   const { params } = useRouter();
@@ -62,16 +59,6 @@ const SentPage = observer(() => {
       )}
     >
       <View className='hero-poster anim-scale-in'>
-        <View className='hero-poster-copy'>
-          <Text className='hero-poster-kicker'>已经寄出</Text>
-          <Text className='hero-poster-title'>这封信已经轻轻离开你手边。</Text>
-          <Text className='hero-poster-description'>
-            {aiGenerated
-              ? '回响已经写好，接下来只把“送达”这段路安静留给时间。'
-              : '接下来的事，不必催促。让它像一封真正的来信一样，走一点路，再回来。'}
-          </Text>
-        </View>
-
         <View className='mt-4 flex items-center justify-center py-4'>
           <View className='anim-float'>
             <LottiePlayer
@@ -84,16 +71,6 @@ const SentPage = observer(() => {
           </View>
         </View>
       </View>
-
-      <ArcoCard tone='emphasis' padding='lg' delay={1}>
-        <SectionHeading
-          eyebrow='大致会在'
-          title={reply ? formatRemaining(reply.availableAt) : '请稍后去收件箱查看'}
-          description={aiGenerated
-            ? '回响已经写好，但它不会立刻出现，会按自己的节奏慢慢来到。'
-            : '系统正在顺着你的来信慢慢写回这封回应，送达时间也会留一点自然的缓冲。'}
-        />
-      </ArcoCard>
 
     </PageShell>
   );

@@ -4,14 +4,16 @@ import { Text, View } from '@tarojs/components';
 
 interface EnvelopeSendProps {
   relation?: string;
+  canExit?: boolean;
   onComplete?: () => void;
 }
 
 const SCENE_DURATION_MS = 3400;
 
-export function EnvelopeSend({ relation, onComplete }: EnvelopeSendProps) {
-  const [phase, setPhase] = useState<'playing' | 'done'>('playing');
+export function EnvelopeSend({ relation, canExit = true, onComplete }: EnvelopeSendProps) {
+  const [phase, setPhase] = useState<'playing' | 'holding' | 'done'>('playing');
   const completedRef = useRef(false);
+  const sceneEndedRef = useRef(false);
 
   const doComplete = () => {
     if (completedRef.current) {
@@ -27,12 +29,24 @@ export function EnvelopeSend({ relation, onComplete }: EnvelopeSendProps) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      doComplete();
+      sceneEndedRef.current = true;
+      if (canExit) {
+        doComplete();
+        return;
+      }
+
+      setPhase('holding');
     }, SCENE_DURATION_MS);
 
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (sceneEndedRef.current && canExit) {
+      doComplete();
+    }
+  }, [canExit]);
 
   return (
     <View className={`envelope-send-overlay ${phase === 'done' ? 'envelope-send-overlay--out' : ''}`}>

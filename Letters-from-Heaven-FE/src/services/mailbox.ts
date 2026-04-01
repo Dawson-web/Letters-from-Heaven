@@ -27,6 +27,8 @@ export interface ClearMailboxPayload {
 export interface DeleteReplyPayload {
   deleted: boolean
   id: string
+  deletedLetterId?: string | null
+  removedFromFeatured?: boolean
 }
 
 export interface CreateLetterRequest extends LetterDraft {

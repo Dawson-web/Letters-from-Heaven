@@ -1676,28 +1676,8 @@ button::after,
     linear-gradient(160deg, rgba(255, 252, 246, 0.98) 0%, rgba(245, 236, 224, 0.97) 58%, rgba(236, 228, 216, 0.98) 100%);
 }
 
-.daily-letter-card::before {
-  content: '';
-  position: absolute;
-  top: 20rpx;
-  left: 26rpx;
-  right: 26rpx;
-  height: 14rpx;
-  border-radius: 999rpx;
-  opacity: 0.66;
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(177, 72, 60, 0.84) 0,
-    rgba(177, 72, 60, 0.84) 22rpx,
-    rgba(255, 255, 255, 0.96) 22rpx,
-    rgba(255, 255, 255, 0.96) 36rpx,
-    rgba(102, 130, 169, 0.72) 36rpx,
-    rgba(102, 130, 169, 0.72) 50rpx
-  );
-}
-
 .daily-letter-loading {
-  padding-top: 8rpx;
+  padding-top: 0;
 }
 
 .daily-letter-shell {
@@ -1744,8 +1724,8 @@ button::after,
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
-  padding: 32rpx 30rpx;
+  gap: 24rpx;
+  padding: 30rpx;
   border-radius: 30rpx;
   border: 1px solid rgba(222, 212, 199, 0.88);
   background: linear-gradient(180deg, rgba(255, 253, 248, 0.98) 0%, rgba(247, 240, 230, 0.96) 100%);
@@ -1754,25 +1734,9 @@ button::after,
     0 18px 34px rgba(86, 68, 49, 0.1);
 }
 
-.daily-letter-paper::before {
-  content: '';
-  position: absolute;
-  top: 24rpx;
-  right: 30rpx;
-  bottom: 24rpx;
-  left: 30rpx;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent 54rpx,
-    rgba(163, 144, 122, 0.18) 54rpx,
-    rgba(163, 144, 122, 0.18) 56rpx
-  );
-  pointer-events: none;
-}
-
 .daily-letter-paper-head,
 .daily-letter-actions,
+.daily-letter-paper-body,
 .daily-letter-excerpt,
 .daily-letter-relation {
   position: relative;
@@ -1782,15 +1746,16 @@ button::after,
 .daily-letter-paper-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16rpx;
+  justify-content: flex-end;
+  gap: 18rpx;
   flex-wrap: wrap;
 }
 
 .daily-letter-badge {
   display: inline-flex;
   align-items: center;
-  padding: 10rpx 18rpx;
+  min-height: 56rpx;
+  padding: 0 18rpx;
   border-radius: 999rpx;
   color: rgba(168, 54, 46, 0.88);
   font-size: 20rpx;
@@ -1801,18 +1766,36 @@ button::after,
 }
 
 .daily-letter-date {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  min-height: 56rpx;
   color: var(--stone);
   font-size: 22rpx;
-  line-height: 1.4;
+  line-height: 1;
+}
+
+.daily-letter-paper-body {
+  min-height: 60rpx;
+  padding-top: 6rpx;
+  line-height: 60rpx;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 58rpx,
+    rgba(163, 144, 122, 0.26) 58rpx,
+    rgba(163, 144, 122, 0.26) 60rpx
+  );
+  background-repeat: repeat-y;
+  background-size: 100% 60rpx;
+  background-position: 0 6rpx;
 }
 
 .daily-letter-excerpt {
   display: block;
   color: var(--charcoal);
   font-size: 30rpx;
-  line-height: 1.9;
-  white-space: pre-wrap;
+  line-height: 60rpx;
+  white-space: normal;
 }
 
 .daily-letter-relation {

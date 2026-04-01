@@ -51,6 +51,7 @@ const WritePage = observer(() => {
   const [sendingMode, setSendingMode] = useState<'normal' | 'test' | null>(null);
   const [sendError, setSendError] = useState('');
   const [showSendAnim, setShowSendAnim] = useState(false);
+  const [sendAnimationUnlocked, setSendAnimationUnlocked] = useState(false);
   const [pendingReplyId, setPendingReplyId] = useState('');
   const [showPublicConsentSheet, setShowPublicConsentSheet] = useState(false);
   const [pendingSendMode, setPendingSendMode] = useState<'normal' | 'test' | null>(null);
@@ -116,10 +117,11 @@ const WritePage = observer(() => {
     setSendError('');
     setSending(true);
     setSendingMode(mode);
+    setPendingReplyId('');
+    setSendAnimationUnlocked(false);
+    setShowSendAnim(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
       const reply = await mailboxStore.sendLetter({
         title: title.trim(),
         body: body.trim(),
@@ -130,11 +132,16 @@ const WritePage = observer(() => {
         testMode: mode === 'test',
       });
 
+      setSending(false);
+      setSendingMode(null);
       setPendingReplyId(reply.id);
-      setShowSendAnim(true);
+      setSendAnimationUnlocked(true);
     } catch (error) {
       setSending(false);
       setSendingMode(null);
+      setPendingReplyId('');
+      setSendAnimationUnlocked(false);
+      setShowSendAnim(false);
       setSendError(getErrorMessage(error));
       Taro.showToast({
         title: getErrorMessage(error),
@@ -165,9 +172,18 @@ const WritePage = observer(() => {
   };
 
   const handleSendAnimComplete = () => {
+    const replyId = pendingReplyId;
+    if (!replyId) {
+      return;
+    }
+
     setShowSendAnim(false);
+    setSendAnimationUnlocked(false);
+    setSending(false);
+    setSendingMode(null);
+    setPendingReplyId('');
     Taro.navigateTo({
-      url: `/pages/sent/index?id=${pendingReplyId}`,
+      url: `/pages/sent/index?id=${replyId}`,
     });
   };
 
@@ -271,11 +287,12 @@ const WritePage = observer(() => {
       )}
     >
       {showSendAnim ? (
-        <EnvelopeSend
-          relation={relation || undefined}
-          onComplete={handleSendAnimComplete}
-        />
-      ) : null}
+      <EnvelopeSend
+        relation={relation || undefined}
+        canExit={sendAnimationUnlocked}
+        onComplete={handleSendAnimComplete}
+      />
+    ) : null}
       {showPublicConsentSheet ? (
         <PublicConsentSheet
           onConfirm={handleConfirmPublicConsent}
