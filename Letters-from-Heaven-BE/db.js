@@ -449,8 +449,8 @@ Reply.belongsTo(MemorialEvent, {
 
 async function init() {
   await sequelize.authenticate();
-  await applyMigrations(sequelize);
   await sequelize.sync();
+  await applyMigrations(sequelize);
 }
 
 module.exports = {

@@ -245,6 +245,8 @@ const MIGRATIONS = [
   {
     id: "20260402_letter_public_consent",
     async up(sequelize) {
+      // publicConsent is written and returned, but there is no query path that filters on it yet.
+      // Keep this migration column-only so old cloud tables with saturated indexes can still boot.
       await addColumnIfMissing(
         sequelize,
         "letters",
@@ -256,13 +258,6 @@ const MIGRATIONS = [
         "letters",
         "publicExcerpt",
         "VARCHAR(255) NOT NULL DEFAULT ''"
-      );
-
-      await createIndexIfMissing(
-        sequelize,
-        "letters",
-        "idx_letters_public_consent",
-        ["publicConsent"]
       );
     },
   },
@@ -324,14 +319,73 @@ async function indexExists(sequelize, table, indexName) {
   return rows[0].count > 0;
 }
 
+async function listIndexes(sequelize, table) {
+  const [rows] = await sequelize.query(
+    `SELECT INDEX_NAME, SEQ_IN_INDEX, COLUMN_NAME
+     FROM INFORMATION_SCHEMA.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+     ORDER BY INDEX_NAME, SEQ_IN_INDEX`,
+    { replacements: [table] }
+  );
+
+  const indexes = new Map();
+  for (const row of rows) {
+    const name = row.INDEX_NAME;
+    if (!indexes.has(name)) {
+      indexes.set(name, []);
+    }
+    indexes.get(name).push(row.COLUMN_NAME);
+  }
+
+  return indexes;
+}
+
+async function indexExistsForColumns(sequelize, table, columns) {
+  const indexes = await listIndexes(sequelize, table);
+  const target = columns.join(",");
+
+  for (const existingColumns of indexes.values()) {
+    if (existingColumns.join(",") === target) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 async function createIndexIfMissing(sequelize, table, indexName, columns) {
   if (await indexExists(sequelize, table, indexName)) {
     return;
   }
 
-  await sequelize.query(
-    `CREATE INDEX ${indexName} ON ${table} (${columns.join(", ")})`
-  );
+  if (await indexExistsForColumns(sequelize, table, columns)) {
+    return;
+  }
+
+  const indexes = await listIndexes(sequelize, table);
+  if (indexes.size >= 64) {
+    console.warn(
+      `[migrations] Skip index ${indexName} on ${table}: table already has ${indexes.size} indexes`
+    );
+    return;
+  }
+
+  try {
+    await sequelize.query(
+      `CREATE INDEX ${indexName} ON ${table} (${columns.join(", ")})`
+    );
+  } catch (error) {
+    const originalCode = error && error.original ? error.original.code : "";
+    const parentCode = error && error.parent ? error.parent.code : "";
+    if (originalCode === "ER_TOO_MANY_KEYS" || parentCode === "ER_TOO_MANY_KEYS") {
+      console.warn(
+        `[migrations] Skip index ${indexName} on ${table}: MySQL index limit reached`
+      );
+      return;
+    }
+
+    throw error;
+  }
 }
 
 async function applyMigrations(sequelize) {
