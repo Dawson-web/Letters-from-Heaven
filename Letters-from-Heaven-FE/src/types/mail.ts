@@ -18,6 +18,7 @@ export interface LetterDraft {
   body: string
   relation: string
   signature: string
+  publicConsent: boolean
 }
 
 export interface SendLetterOptions {
@@ -28,6 +29,15 @@ export interface LetterRecord extends LetterDraft {
   id: string
   createdAt: number
   replyId: string
+  publicExcerpt?: string
+}
+
+export interface FeaturedLetterRecord {
+  id: string
+  relation: string
+  headline: string
+  excerpt: string
+  createdAt: number
 }
 
 export interface ReplyRecord {

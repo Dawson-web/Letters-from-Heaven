@@ -142,28 +142,19 @@ const ProfilePage = observer(() => {
       title='我的'
       subtitle='这里放着这只信箱的近况、边界提醒，以及几项需要你亲自决定的整理操作。'
     >
-      <ArcoCard tone='emphasis' padding='lg' delay={1}>
-        <SectionHeading
-          eyebrow='当前信箱'
-          title='把这只信箱最近的状态收在这里'
-          description='你可以在这里看看已经寄出的信、暂存的草稿，以及该保留或该清理的东西。'
-        />
-
-        <View className='mt-6 metric-cluster'>
-          <View className='metric-tile'>
-            <Text className='metric-label'>信件数</Text>
-            <Text className='metric-value stat-number'>{mailboxStore.letters.length}</Text>
-            <Text className='metric-caption'>已经寄出去，留在邮路上的信。</Text>
-          </View>
-
-          <View className='metric-tile'>
-            <Text className='metric-label'>草稿</Text>
-            <Text className='metric-value stat-number'>{mailboxStore.draft.body ? '1' : '0'}</Text>
-            <Text className='metric-caption'>还放在草稿里，等你哪天继续写。</Text>
-          </View>
+      <View className='metric-cluster'>
+        <View className='metric-tile'>
+          <Text className='metric-label'>信件数</Text>
+          <Text className='metric-value stat-number'>{mailboxStore.letters.length}</Text>
+          <Text className='metric-caption'>已经寄出去，留在邮路上的信。</Text>
         </View>
-      </ArcoCard>
 
+        <View className='metric-tile'>
+          <Text className='metric-label'>草稿</Text>
+          <Text className='metric-value stat-number'>{mailboxStore.draft.body ? '1' : '0'}</Text>
+          <Text className='metric-caption'>还放在草稿里，等你哪天继续写。</Text>
+        </View>
+      </View>
       <ArcoCard tone='default' padding='lg' delay={2}>
         <SectionHeading
           eyebrow='回响节奏'

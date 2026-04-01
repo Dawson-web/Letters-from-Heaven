@@ -48,13 +48,13 @@ const SentPage = observer(() => {
           <ArcoButton
             className='w-full'
             size='lg'
-            onClick={() => Taro.redirectTo({ url: '/pages/inbox/index' })}
+            onClick={() => void Taro.switchTab({ url: '/pages/inbox/index' })}
           >
             去收件箱等等它
           </ArcoButton>
           <ArcoButton
             variant='text'
-            onClick={() => Taro.redirectTo({ url: '/pages/write/index' })}
+            onClick={() => void Taro.switchTab({ url: '/pages/write/index' })}
           >
             再写一封信
           </ArcoButton>

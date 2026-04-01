@@ -16,5 +16,6 @@ export const EMPTY_DRAFT: LetterDraft = {
   title: '',
   body: '',
   relation: '',
-  signature: ''
+  signature: '',
+  publicConsent: false
 }

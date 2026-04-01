@@ -1,48 +1,48 @@
 import { Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
+import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 
 import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
+import { LoadingState } from '@/components/arco/loading-state';
 import { SectionHeading } from '@/components/arco/section-heading';
 import { BoundaryConfirmSheet } from '@/components/auth/boundary-confirm-sheet';
 import { PageShell } from '@/components/layout/page-shell';
+import { fetchFeaturedLetter } from '@/services/discovery';
+import { getErrorMessage } from '@/services/request';
 import { useRootStore } from '@/stores/root-store';
+import type { FeaturedLetterRecord } from '@/types/mail';
 import { cn } from '@/utils/cn';
-
-const HOME_ENTRIES = [
-  {
-    title: '个人页面',
-    badge: '我的',
-    description: '查看信箱状态、边界提醒和整理操作。',
-    url: '/pages/profile/index',
-  },
-  {
-    title: '纪念档案',
-    badge: '档案',
-    description: '补充重要的人和纪念日，让回响更贴近记忆。',
-    url: '/pages/memorial/index',
-  },
-  {
-    title: '收件箱',
-    badge: '回响',
-    description: '查看已经到来的回应，或等等还在路上的信。',
-    url: '/pages/inbox/index',
-  },
-  {
-    title: '开始写信',
-    badge: '写信',
-    description: '把今天想说的话写下来，交给时间慢慢送达。',
-    url: '/pages/write/index',
-  },
-] as const;
 
 const HomePage = observer(() => {
   const { mailboxStore } = useRootStore();
   const hasEntryGate = !mailboxStore.boundaryAccepted;
+  const [featuredLetter, setFeaturedLetter] = useState<FeaturedLetterRecord | null>(null);
+  const [pickedOn, setPickedOn] = useState('');
+  const [loadingFeatured, setLoadingFeatured] = useState(true);
+  const [featuredError, setFeaturedError] = useState('');
+
+  const refreshFeaturedLetter = async () => {
+    setLoadingFeatured(true);
+
+    try {
+      const result = await fetchFeaturedLetter();
+      setFeaturedLetter(result.featuredLetter);
+      setPickedOn(result.pickedOn);
+      setFeaturedError('');
+    } catch (error) {
+      setFeaturedError(getErrorMessage(error));
+      setFeaturedLetter(null);
+      setPickedOn('');
+    } finally {
+      setLoadingFeatured(false);
+    }
+  };
 
   useDidShow(() => {
     void mailboxStore.refreshReplies();
+    void refreshFeaturedLetter();
   });
 
   return (
@@ -53,24 +53,6 @@ const HomePage = observer(() => {
       subtitle='把没说完的话，先放在这里，慢慢来，也来得及。'
       hero={(
         <View className={cn('hero-poster anim-scale-in', hasEntryGate && 'opacity-50')}>
-          <View className='hero-poster-copy'>
-            <View className='hero-poster-actions'>
-              <ArcoButton
-                size='lg'
-                onClick={() => Taro.navigateTo({ url: '/pages/write/index' })}
-              >
-                开始写信
-              </ArcoButton>
-              <ArcoButton
-                variant='outline'
-                size='lg'
-                onClick={() => Taro.navigateTo({ url: '/pages/inbox/index' })}
-              >
-                查看回响
-              </ArcoButton>
-            </View>
-          </View>
-
           <View className='hero-poster-visual anim-gentle-sway'>
             <View className='hero-route-line' />
 
@@ -120,25 +102,63 @@ const HomePage = observer(() => {
         <BoundaryConfirmSheet onConfirm={mailboxStore.acceptBoundary} />
       ) : null}
 
-      <ArcoCard tone='muted' padding='lg' delay={2}>
-        <SectionHeading
-          eyebrow=''
-          title=''
-          description='把常用页面放在首页，省去来回翻找。'
-        />
-        <View className='home-entry-grid'>
-          {HOME_ENTRIES.map((entry, index) => (
-            <View
-              key={entry.url}
-              className={cn('home-entry-card btn-press', `anim-delay-${Math.min(index + 2, 9)}`)}
-              onClick={() => Taro.navigateTo({ url: entry.url })}
-            >
-              <Text className='home-entry-badge'>{entry.badge}</Text>
-              <Text className='home-entry-title'>{entry.title}</Text>
-              <Text className='home-entry-description'>{entry.description}</Text>
+      <ArcoCard tone='emphasis' padding='lg' delay={2} className='daily-letter-card'>
+        {loadingFeatured ? (
+          <LoadingState
+            text='正在挑选今天想读到的一封信…'
+            className='daily-letter-loading'
+          />
+        ) : featuredLetter ? (
+          <View className='daily-letter-shell'>
+            <View className='daily-letter-copy'>
+              <Text className='daily-letter-kicker'>今日共鸣</Text>
+              <Text className='daily-letter-headline'>{featuredLetter.headline}</Text>
+              <Text className='daily-letter-description'>
+                一封经作者同意匿名收录的信，也许正好说中了你今天没说出口的话。
+              </Text>
             </View>
-          ))}
-        </View>
+
+            <View className='daily-letter-paper'>
+              <View className='daily-letter-paper-head'>
+                <Text className='daily-letter-badge'>匿名收录</Text>
+                {pickedOn ? <Text className='daily-letter-date'>{pickedOn}</Text> : null}
+              </View>
+              <Text className='daily-letter-excerpt'>“{featuredLetter.excerpt}”</Text>
+              <Text className='daily-letter-relation'>这是一封写给{featuredLetter.relation || '远方'}的信</Text>
+            </View>
+
+            <View className='daily-letter-actions'>
+              <ArcoButton
+                size='lg'
+                onClick={() => void Taro.switchTab({ url: '/pages/write/index' })}
+              >
+                我也写一封
+              </ArcoButton>
+              <Text className='daily-letter-footnote'>
+                每天会从愿意匿名收录的来信里，固定展示一段新的节选。
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View className='daily-letter-empty'>
+            <SectionHeading
+              eyebrow='今日共鸣'
+              title='今天的首页，还在等第一封愿意被轻轻读到的信'
+              description={
+                featuredError
+                  ? `推荐内容暂时没有加载出来：${featuredError}`
+                  : '当有人愿意把一段想念匿名收录在这里，它就会出现在首页，陪陪下一个打开这只信箱的人。'
+              }
+            />
+            <ArcoButton
+              variant='outline'
+              size='lg'
+              onClick={() => void Taro.switchTab({ url: '/pages/write/index' })}
+            >
+              写下第一封匿名共鸣
+            </ArcoButton>
+          </View>
+        )}
       </ArcoCard>
     </PageShell>
   );

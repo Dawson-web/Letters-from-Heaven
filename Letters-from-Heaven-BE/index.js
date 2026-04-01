@@ -9,6 +9,7 @@ const {
   clearMailbox,
   createLetter,
   deleteReply,
+  getFeaturedLetter,
   getMailbox,
   getReplyDetail,
   listLetters,
@@ -94,6 +95,10 @@ app.get("/api/health", (req, res) => {
     status: "ok",
   });
 });
+
+app.get("/api/featured-letter", asyncHandler(async (req, res) => {
+  sendSuccess(res, await getFeaturedLetter());
+}));
 
 // 更新计数
 app.post("/api/count", asyncHandler(async (req, res) => {

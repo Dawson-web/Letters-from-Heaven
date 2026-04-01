@@ -1,6 +1,6 @@
-import { Input, Text, View } from '@tarojs/components';
+import { Input, Picker, Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 
 import { ArcoButton } from '@/components/arco/button';
@@ -8,7 +8,6 @@ import { ArcoCard } from '@/components/arco/card';
 import { ArcoEmpty } from '@/components/arco/empty';
 import { LoadingState } from '@/components/arco/loading-state';
 import { ArcoNotice } from '@/components/arco/notice';
-import { ArcoTag } from '@/components/arco/tag';
 import { PageShell } from '@/components/layout/page-shell';
 import { getErrorMessage } from '@/services/request';
 import { useRootStore } from '@/stores/root-store';
@@ -19,16 +18,16 @@ import { formatDateTime, formatRemaining } from '@/utils/time';
 type StatusFilter = 'all' | 'ready' | 'waiting'
 type ScopeFilter = 'active' | 'favorite' | 'archived'
 
-const STATUS_FILTER_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
-  { value: 'all', label: '全部状态' },
-  { value: 'ready', label: '只看已抵达' },
-  { value: 'waiting', label: '只看路上' },
+const STATUS_FILTER_OPTIONS: Array<{ value: StatusFilter; label: string; compactLabel: string }> = [
+  { value: 'all', label: '全部状态', compactLabel: '全部' },
+  { value: 'ready', label: '只看已抵达', compactLabel: '已抵达' },
+  { value: 'waiting', label: '只看路上', compactLabel: '路上' },
 ]
 
-const SCOPE_FILTER_OPTIONS: Array<{ value: ScopeFilter; label: string }> = [
-  { value: 'active', label: '常看信件' },
-  { value: 'favorite', label: '收藏信件' },
-  { value: 'archived', label: '归档信件' },
+const SCOPE_FILTER_OPTIONS: Array<{ value: ScopeFilter; label: string; compactLabel: string }> = [
+  { value: 'active', label: '常看信件', compactLabel: '常看' },
+  { value: 'favorite', label: '收藏信件', compactLabel: '收藏' },
+  { value: 'archived', label: '归档信件', compactLabel: '归档' },
 ]
 
 const InboxPage = observer(() => {
@@ -40,6 +39,14 @@ const InboxPage = observer(() => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('active');
+  const statusFilterLabels = useMemo(
+    () => STATUS_FILTER_OPTIONS.map((item) => item.label),
+    []
+  );
+  const scopeFilterLabels = useMemo(
+    () => SCOPE_FILTER_OPTIONS.map((item) => item.label),
+    []
+  );
 
   useDidShow(() => {
     void mailboxStore.refreshReplies(true);
@@ -138,6 +145,14 @@ const InboxPage = observer(() => {
       .toLowerCase()
       .includes(keyword);
   });
+  const statusFilterIndex = Math.max(
+    STATUS_FILTER_OPTIONS.findIndex((item) => item.value === statusFilter),
+    0
+  );
+  const scopeFilterIndex = Math.max(
+    SCOPE_FILTER_OPTIONS.findIndex((item) => item.value === scopeFilter),
+    0
+  );
 
   const handleStartRename = (reply: ReplyRecord) => {
     setEditingReplyId(reply.id);
@@ -195,119 +210,32 @@ const InboxPage = observer(() => {
     }
   };
 
-  const handleClearInbox = async () => {
-    const result = await Taro.showModal({
-      title: '要清空收件箱吗',
-      content: '这会删除当前账号下的所有回响和信件记录，而且不能恢复。',
-    });
-
-    if (!result.confirm) {
-      return;
-    }
-
-    try {
-      await mailboxStore.clearInboxItems();
-      handleCancelRename();
-      Taro.showToast({ title: '收件箱已经清空', icon: 'none' });
-    } catch (error) {
-      Taro.showToast({ title: getErrorMessage(error), icon: 'none' });
-    }
-  };
-
   return (
     <PageShell
       eyebrow='等待打开的那一刻'
       title='收件箱'
       subtitle='这里收着已经到来的，也收着还在路上的回应。'
-      meta={(
-        <View className='page-shell-actions page-shell-actions--wrap'>
-          <ArcoButton
-            size='md'
-            onClick={() => Taro.navigateTo({ url: '/pages/write/index' })}
-          >
-            新建一封信
-          </ArcoButton>
-          {mailboxStore.inboxItems.length > 0 ? (
-            <ArcoButton
-              variant='text'
-              size='md'
-              loading={mailboxStore.resetting}
-              onClick={handleClearInbox}
-            >
-              清空收件箱
-            </ArcoButton>
-          ) : null}
-        </View>
-      )}
+    // meta={(
+    //   <View className='page-shell-actions page-shell-actions--wrap'>
+    //     <ArcoButton
+    //       size='md'
+    //       onClick={() => void Taro.switchTab({ url: '/pages/write/index' })}
+    //     >
+    //       新建一封信
+    //     </ArcoButton>
+    //     {mailboxStore.inboxItems.length > 0 ? (
+    //       <ArcoButton
+    //         variant='text'
+    //         size='md'
+    //         loading={mailboxStore.resetting}
+    //         onClick={handleClearInbox}
+    //       >
+    //         清空收件箱
+    //       </ArcoButton>
+    //     ) : null}
+    //   </View>
+    // )}
     >
-      <ArcoCard tone='emphasis' padding='lg' delay={1} className='inbox-status-hero-card'>
-        <View className='inbox-status-hero'>
-          <View className='inbox-status-copy'>
-            <Text className='inbox-status-eyebrow'>此刻的信箱</Text>
-            <Text className='inbox-status-title'>有些回响已经到了，有些还在慢慢靠近</Text>
-            <Text className='inbox-status-description'>
-              你不需要急着把它们全部打开。先看看哪一封，正好适合今天的你。
-            </Text>
-          </View>
-
-          <View className='inbox-status-visual anim-gentle-sway'>
-            <View className='inbox-status-route' />
-
-            <View className='inbox-status-sheet inbox-status-sheet--back'>
-              <View className='inbox-status-sheet-lines'>
-                <View className='inbox-status-sheet-line inbox-status-sheet-line--long' />
-                <View className='inbox-status-sheet-line inbox-status-sheet-line--medium' />
-                <View className='inbox-status-sheet-line inbox-status-sheet-line--long' />
-                <View className='inbox-status-sheet-line inbox-status-sheet-line--short' />
-              </View>
-            </View>
-
-            <View className='inbox-status-sheet inbox-status-sheet--front'>
-              <View className='inbox-status-sheet-header' />
-              <View className='inbox-status-sheet-body'>
-                <View className='inbox-status-sheet-line inbox-status-sheet-line--long' />
-                <View className='inbox-status-sheet-line inbox-status-sheet-line--long' />
-                <View className='inbox-status-sheet-line inbox-status-sheet-line--medium' />
-              </View>
-              <Text className='inbox-status-sheet-signature'>想念会被接住</Text>
-            </View>
-
-            <View className='hero-postmark hero-postmark--red inbox-status-stamp'>
-              <View className='hero-postmark-ring hero-postmark-ring--outer' />
-              <View className='hero-postmark-ring hero-postmark-ring--inner' />
-              <Text className='hero-postmark-top'>AIR MAIL</Text>
-              <Text className='hero-postmark-center'>云端回信</Text>
-              <Text className='hero-postmark-bottom'>POST OFFICE</Text>
-              <View className='hero-postmark-stars'>
-                <View className='hero-postmark-star' />
-                <View className='hero-postmark-star' />
-                <View className='hero-postmark-star' />
-                <View className='hero-postmark-star' />
-              </View>
-            </View>
-          </View>
-
-          <View className='inbox-status-meters'>
-            <View className='inbox-status-meter inbox-status-meter--ready'>
-              <View className='metric-label'>
-                <View className='dot-ready' />
-                已抵达
-              </View>
-              <Text className='inbox-status-meter-value stat-number'>{mailboxStore.readyCount}</Text>
-              <Text className='inbox-status-meter-copy'>已经静静等你打开。</Text>
-            </View>
-
-            <View className='inbox-status-meter inbox-status-meter--waiting'>
-              <View className='metric-label'>
-                <View className='dot-waiting' />
-                还在路上
-              </View>
-              <Text className='inbox-status-meter-value stat-number'>{mailboxStore.waitingCount}</Text>
-              <Text className='inbox-status-meter-copy'>慢一点，也没有关系。</Text>
-            </View>
-          </View>
-        </View>
-      </ArcoCard>
 
       {mailboxStore.lastError ? (
         <ArcoNotice
@@ -327,35 +255,52 @@ const InboxPage = observer(() => {
 
       <ArcoCard tone='default' padding='md' delay={2}>
         <View className='flex flex-col gap-4'>
-          <Input
-            className='field-control'
-            placeholder='搜索标题、正文或纪念类型'
-            placeholderStyle='color: #B5AB9C'
-            value={searchKeyword}
-            onInput={(event) => setSearchKeyword(event.detail.value)}
-          />
-          <View className='flex flex-wrap gap-2'>
-            {STATUS_FILTER_OPTIONS.map((item) => (
-              <ArcoTag
-                key={item.value}
-                active={statusFilter === item.value}
-                onClick={() => setStatusFilter(item.value)}
-              >
-                {item.label}
-              </ArcoTag>
-            ))}
+          <View className='inbox-filter-toolbar'>
+            <View className='inbox-filter-search'>
+              <Input
+                className='inbox-filter-search-input'
+                placeholder='搜索标题、正文或纪念类型'
+                placeholderStyle='color: #B5AB9C'
+                value={searchKeyword}
+                onInput={(event) => setSearchKeyword(event.detail.value)}
+              />
+            </View>
+
+            <Picker
+              mode='selector'
+              range={statusFilterLabels}
+              value={statusFilterIndex}
+              onChange={(event) => {
+                const next = STATUS_FILTER_OPTIONS[Number(event.detail.value)];
+                setStatusFilter(next?.value ?? 'all');
+              }}
+            >
+              <View className='inbox-filter-select'>
+                <Text className='inbox-filter-select-label'>信件状态</Text>
+                <Text className='inbox-filter-select-value'>
+                  {STATUS_FILTER_OPTIONS[statusFilterIndex]?.compactLabel ?? '全部'}
+                </Text>
+              </View>
+            </Picker>
+
+            <Picker
+              mode='selector'
+              range={scopeFilterLabels}
+              value={scopeFilterIndex}
+              onChange={(event) => {
+                const next = SCOPE_FILTER_OPTIONS[Number(event.detail.value)];
+                setScopeFilter(next?.value ?? 'active');
+              }}
+            >
+              <View className='inbox-filter-select'>
+                <Text className='inbox-filter-select-label'>信件类型</Text>
+                <Text className='inbox-filter-select-value'>
+                  {SCOPE_FILTER_OPTIONS[scopeFilterIndex]?.compactLabel ?? '常看'}
+                </Text>
+              </View>
+            </Picker>
           </View>
-          <View className='flex flex-wrap gap-2'>
-            {SCOPE_FILTER_OPTIONS.map((item) => (
-              <ArcoTag
-                key={item.value}
-                active={scopeFilter === item.value}
-                onClick={() => setScopeFilter(item.value)}
-              >
-                {item.label}
-              </ArcoTag>
-            ))}
-          </View>
+
           <Text className='text-caption text-driftwood'>
             当前筛出 {visibleReplies.length} 封信
           </Text>
@@ -369,7 +314,7 @@ const InboxPage = observer(() => {
           title='没有符合当前筛选的回响'
           description='你可以放宽筛选条件，或者去写一封新的信。'
           actionText='去写第一封信'
-          onAction={() => Taro.navigateTo({ url: '/pages/write/index' })}
+          onAction={() => void Taro.switchTab({ url: '/pages/write/index' })}
         />
       ) : (
         visibleReplies.map((reply, index) => {

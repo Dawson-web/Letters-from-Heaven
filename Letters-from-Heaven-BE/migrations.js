@@ -242,6 +242,30 @@ const MIGRATIONS = [
       );
     },
   },
+  {
+    id: "20260402_letter_public_consent",
+    async up(sequelize) {
+      await addColumnIfMissing(
+        sequelize,
+        "letters",
+        "publicConsent",
+        "TINYINT(1) NOT NULL DEFAULT 0"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "letters",
+        "publicExcerpt",
+        "VARCHAR(255) NOT NULL DEFAULT ''"
+      );
+
+      await createIndexIfMissing(
+        sequelize,
+        "letters",
+        "idx_letters_public_consent",
+        ["publicConsent"]
+      );
+    },
+  },
 ];
 
 async function ensureMigrationsTable(sequelize) {

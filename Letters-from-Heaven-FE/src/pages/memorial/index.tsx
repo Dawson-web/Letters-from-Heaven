@@ -5,7 +5,6 @@ import { observer } from 'mobx-react-lite';
 import { ArcoButton } from '@/components/arco/button';
 import { ArcoCard } from '@/components/arco/card';
 import { ArcoEmpty } from '@/components/arco/empty';
-import { SectionHeading } from '@/components/arco/section-heading';
 import { PageShell } from '@/components/layout/page-shell';
 import { useRootStore } from '@/stores/root-store';
 
@@ -36,13 +35,6 @@ const MemorialPage = observer(() => {
         </View>
       )}
     >
-      <ArcoCard tone='emphasis' padding='lg' delay={1}>
-        <SectionHeading
-          eyebrow='为什么留档'
-          title='让想念有一条可以慢慢回望的线索'
-          description='把称呼、记忆和纪念日放在一起，后来的回响才会更像从熟悉之处长出来。'
-        />
-      </ArcoCard>
 
       {memorialStore.profiles.length === 0 ? (
         <ArcoEmpty

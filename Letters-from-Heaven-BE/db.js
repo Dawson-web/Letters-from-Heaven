@@ -135,6 +135,16 @@ const Letter = sequelize.define(
       allowNull: false,
       defaultValue: "",
     },
+    publicConsent: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    publicExcerpt: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      defaultValue: "",
+    },
     replyId: {
       type: DataTypes.STRING(48),
       allowNull: false,

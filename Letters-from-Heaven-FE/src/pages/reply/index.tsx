@@ -173,7 +173,7 @@ const ReplyPage = observer(() => {
           title='先别着急，它可能还在路上'
           description='你可以回到收件箱再看看，或者先去写下另一封想说的话。'
           actionText='返回收件箱'
-          onAction={() => Taro.redirectTo({ url: '/pages/inbox/index' })}
+          onAction={() => void Taro.switchTab({ url: '/pages/inbox/index' })}
         />
       </PageShell>
     );
@@ -202,7 +202,7 @@ const ReplyPage = observer(() => {
             </ArcoButton>
             <ArcoButton
               variant='text'
-              onClick={() => Taro.redirectTo({ url: '/pages/inbox/index' })}
+              onClick={() => void Taro.switchTab({ url: '/pages/inbox/index' })}
             >
               先回收件箱
             </ArcoButton>
@@ -273,13 +273,13 @@ const ReplyPage = observer(() => {
           <ArcoButton
             className='w-full'
             size='lg'
-            onClick={() => Taro.redirectTo({ url: '/pages/inbox/index' })}
+            onClick={() => void Taro.switchTab({ url: '/pages/inbox/index' })}
           >
             返回收件箱
           </ArcoButton>
           <ArcoButton
             variant='text'
-            onClick={() => Taro.redirectTo({ url: '/pages/write/index' })}
+            onClick={() => void Taro.switchTab({ url: '/pages/write/index' })}
           >
             再写一封信
           </ArcoButton>

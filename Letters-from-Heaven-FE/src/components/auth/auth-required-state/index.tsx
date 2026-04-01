@@ -17,7 +17,7 @@ export function AuthRequiredState({
       title={title}
       description={description}
       actionText={actionText}
-      onAction={() => Taro.reLaunch({ url: '/pages/home/index' })}
+      onAction={() => void Taro.switchTab({ url: '/pages/home/index' })}
     />
   )
 }

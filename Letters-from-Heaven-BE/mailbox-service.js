@@ -9,7 +9,6 @@ const {
 const { Op } = require("sequelize");
 const { AppError } = require("./errors");
 const {
-  RELATION_OPTIONS,
   REPLY_STATUS,
   MEMORIAL_SOURCE_TYPE,
   FEEDBACK_SCORE_OPTIONS,
@@ -23,6 +22,9 @@ const { generateReplyBodyByAI } = require("./ai-service");
 const { notifyReplyReady } = require("./notification-service");
 
 const AI_READY_PREVIEW = "你的来信已收到，回响已生成。";
+const FEATURE_TIME_ZONE = "Asia/Shanghai";
+const REDACTED_CONTACT = "[联系方式已隐去]";
+const REDACTED_NUMBER = "[数字已隐去]";
 
 function createId(prefix) {
   const random = Math.random().toString(36).slice(2, 8);
@@ -34,9 +36,124 @@ function normalizeText(input, maxLength) {
   return value.slice(0, maxLength);
 }
 
+function normalizeInlineText(input, maxLength) {
+  const value = typeof input === "string" ? input.replace(/\s+/g, " ").trim() : "";
+  return value.slice(0, maxLength);
+}
+
 function toFiniteNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function redactPublicText(input) {
+  let value = normalizeInlineText(input, 1200);
+
+  value = value.replace(/https?:\/\/\S+/gi, "[链接已隐去]");
+  value = value.replace(
+    /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
+    REDACTED_CONTACT
+  );
+  value = value.replace(
+    /(?:\+?86[-\s]?)?1[3-9]\d{9}/g,
+    REDACTED_CONTACT
+  );
+  value = value.replace(/微信[:：]?\s*[A-Za-z0-9_-]{5,}/gi, "微信已隐去");
+  value = value.replace(/\b\d{6,}\b/g, REDACTED_NUMBER);
+
+  return normalizeInlineText(value, 255);
+}
+
+function createPublicExcerpt(body) {
+  const redacted = redactPublicText(body);
+  if (!redacted) {
+    return "";
+  }
+
+  const segments = redacted
+    .split(/[。！？!?；;\n]/)
+    .map((segment) => normalizeInlineText(segment, 160))
+    .filter(Boolean);
+
+  let excerpt = "";
+  for (const segment of segments) {
+    const next = excerpt ? `${excerpt}，${segment}` : segment;
+    if (next.length > 120) {
+      if (!excerpt) {
+        excerpt = segment.slice(0, 120);
+      }
+      break;
+    }
+
+    excerpt = next;
+    if (excerpt.length >= 48) {
+      break;
+    }
+  }
+
+  if (!excerpt) {
+    excerpt = redacted.slice(0, 120);
+  }
+
+  excerpt = excerpt.replace(/[“”"]/g, "").trim();
+  if (excerpt.length > 120) {
+    excerpt = `${excerpt.slice(0, 118).trim()}…`;
+  } else if (!/[。！？!?…]$/.test(excerpt)) {
+    excerpt = `${excerpt}…`;
+  }
+
+  return normalizeInlineText(excerpt, 255);
+}
+
+function buildPublicHeadline(relation) {
+  const safeRelation = normalizeText(relation, 16) || "远方";
+  return `写给${safeRelation}的一封信`;
+}
+
+function getDateKeyInTimeZone(timestamp = Date.now(), timeZone = FEATURE_TIME_ZONE) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(new Date(timestamp));
+  const partMap = {};
+
+  for (const part of parts) {
+    if (part.type !== "literal") {
+      partMap[part.type] = part.value;
+    }
+  }
+
+  return `${partMap.year}-${partMap.month}-${partMap.day}`;
+}
+
+function hashString(input) {
+  let hash = 2166136261;
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
+function pickFeaturedLetter(candidates, dateKey) {
+  if (!Array.isArray(candidates) || candidates.length === 0) {
+    return null;
+  }
+
+  return [...candidates].sort((left, right) => {
+    const leftScore = hashString(`${dateKey}:${left.id}`);
+    const rightScore = hashString(`${dateKey}:${right.id}`);
+
+    if (leftScore !== rightScore) {
+      return leftScore - rightScore;
+    }
+
+    return Number(right.createdAtMs) - Number(left.createdAtMs);
+  })[0];
 }
 
 function serializeLetter(letter) {
@@ -51,7 +168,23 @@ function serializeLetter(letter) {
     body: letter.body,
     relation: letter.relation,
     signature: letter.signature,
+    publicConsent: Boolean(letter.publicConsent),
+    publicExcerpt: normalizeText(letter.publicExcerpt, 255),
     replyId: letter.replyId,
+    createdAt: Number(letter.createdAtMs),
+  };
+}
+
+function serializeFeaturedLetter(letter) {
+  if (!letter) {
+    return null;
+  }
+
+  return {
+    id: letter.id,
+    relation: normalizeText(letter.relation, 16) || "远方",
+    headline: buildPublicHeadline(letter.relation),
+    excerpt: normalizeText(letter.publicExcerpt, 255),
     createdAt: Number(letter.createdAtMs),
   };
 }
@@ -116,11 +249,10 @@ function validateLetterPayload(payload = {}) {
   const relation = normalizeText(payload.relation, 16);
   const signature = normalizeText(payload.signature, 16);
   const testMode = payload.testMode === true;
+  const publicConsent = payload.publicConsent === true;
 
-  if (!relation || !RELATION_OPTIONS.includes(relation)) {
-    throw new AppError(400, "Invalid relation", {
-      relationOptions: RELATION_OPTIONS,
-    });
+  if (!relation) {
+    throw new AppError(400, "Relation is required");
   }
 
   if (body.length < 8) {
@@ -133,6 +265,7 @@ function validateLetterPayload(payload = {}) {
     relation,
     signature,
     testMode,
+    publicConsent,
   };
 }
 
@@ -379,6 +512,7 @@ async function createLetter(userContext, payload) {
   const now = Date.now();
   const letterId = createId("letter");
   const replyId = createId("reply");
+  const publicExcerpt = input.publicConsent ? createPublicExcerpt(input.body) : "";
 
   const user = await touchUser(userContext);
   const replyPayload = buildWaitingReplyPayload(input, now, {
@@ -403,6 +537,8 @@ async function createLetter(userContext, payload) {
         body: input.body,
         relation: input.relation,
         signature: input.signature,
+        publicConsent: input.publicConsent,
+        publicExcerpt,
         replyId,
         createdAtMs: now,
       },
@@ -446,6 +582,26 @@ async function listLetters(userContext) {
   });
 
   return letters.map(serializeLetter);
+}
+
+async function getFeaturedLetter() {
+  const pickedOn = getDateKeyInTimeZone();
+  const candidates = await Letter.findAll({
+    where: {
+      publicConsent: true,
+      publicExcerpt: {
+        [Op.ne]: "",
+      },
+    },
+    order: [["createdAtMs", "DESC"]],
+  });
+
+  const featured = pickFeaturedLetter(candidates, pickedOn);
+
+  return {
+    featuredLetter: serializeFeaturedLetter(featured),
+    pickedOn,
+  };
 }
 
 function shouldIncludeArchived(options = {}) {
@@ -673,6 +829,7 @@ module.exports = {
   listReplies,
   getReplyDetail,
   getMailbox,
+  getFeaturedLetter,
   clearMailbox,
   updateReply,
   deleteReply,

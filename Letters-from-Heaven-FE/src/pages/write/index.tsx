@@ -11,6 +11,7 @@ import { LetterPaper } from '@/components/arco/letter-paper';
 import { ArcoNotice } from '@/components/arco/notice';
 import { SectionHeading } from '@/components/arco/section-heading';
 import { AuthRequiredState } from '@/components/auth/auth-required-state';
+import { PublicConsentSheet } from '@/components/mail/public-consent-sheet';
 import { RELATION_OPTIONS } from '@/constants/relations';
 import { PageShell } from '@/components/layout/page-shell';
 import { getErrorMessage } from '@/services/request';
@@ -51,6 +52,8 @@ const WritePage = observer(() => {
   const [sendError, setSendError] = useState('');
   const [showSendAnim, setShowSendAnim] = useState(false);
   const [pendingReplyId, setPendingReplyId] = useState('');
+  const [showPublicConsentSheet, setShowPublicConsentSheet] = useState(false);
+  const [pendingSendMode, setPendingSendMode] = useState<'normal' | 'test' | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -105,7 +108,7 @@ const WritePage = observer(() => {
     );
   }
 
-  const handleSend = async (mode: 'normal' | 'test' = 'normal') => {
+  const handleSend = async (mode: 'normal' | 'test' = 'normal', publicConsent = false) => {
     if (!canSend || sending) {
       return;
     }
@@ -122,6 +125,7 @@ const WritePage = observer(() => {
         body: body.trim(),
         relation,
         signature: signature.trim(),
+        publicConsent,
       }, {
         testMode: mode === 'test',
       });
@@ -137,6 +141,27 @@ const WritePage = observer(() => {
         icon: 'none',
       });
     }
+  };
+
+  const handleRequestSend = (mode: 'normal' | 'test' = 'normal') => {
+    if (!canSend || sending) {
+      return;
+    }
+
+    setPendingSendMode(mode);
+    setShowPublicConsentSheet(true);
+  };
+
+  const handleConfirmPublicConsent = (publicConsent: boolean) => {
+    const nextMode = pendingSendMode || 'normal';
+    setPendingSendMode(null);
+    setShowPublicConsentSheet(false);
+    void handleSend(nextMode, publicConsent);
+  };
+
+  const handleClosePublicConsentSheet = () => {
+    setPendingSendMode(null);
+    setShowPublicConsentSheet(false);
   };
 
   const handleSendAnimComplete = () => {
@@ -214,7 +239,7 @@ const WritePage = observer(() => {
           <ArcoButton
             disabled={!canSend}
             loading={sending && sendingMode === 'normal'}
-            onClick={() => void handleSend('normal')}
+            onClick={() => handleRequestSend('normal')}
             className='w-full'
             size='lg'
           >
@@ -225,7 +250,7 @@ const WritePage = observer(() => {
               variant='outline'
               disabled={!canSend}
               loading={sending && sendingMode === 'test'}
-              onClick={() => void handleSend('test')}
+              onClick={() => handleRequestSend('test')}
               className='w-full'
               size='lg'
             >
@@ -249,6 +274,12 @@ const WritePage = observer(() => {
         <EnvelopeSend
           relation={relation || undefined}
           onComplete={handleSendAnimComplete}
+        />
+      ) : null}
+      {showPublicConsentSheet ? (
+        <PublicConsentSheet
+          onConfirm={handleConfirmPublicConsent}
+          onClose={handleClosePublicConsentSheet}
         />
       ) : null}
 
@@ -295,7 +326,7 @@ const WritePage = observer(() => {
 
       <LetterPaper variant='hero' className='letter-paper--form'>
         <FormField
-          label='这封信想叫什么'
+          label='开头'
           hint='可选。如果你愿意，可以给这份想念一个轻一点的开头。'
         >
           <Input
@@ -309,7 +340,7 @@ const WritePage = observer(() => {
         </FormField>
 
         <FormField
-          label='你此刻最想说的话'
+          label='正文'
           hint='不用工整，也不用完整。先把最先冒出来的那一句留在这里。'
           error={bodyError}
         >
@@ -325,7 +356,7 @@ const WritePage = observer(() => {
         </FormField>
 
         <FormField
-          label='你想留下的署名'
+          label='署名'
           hint='可选。可以写名字，也可以只留下一个你熟悉的称呼。'
         >
           <Input
@@ -340,18 +371,6 @@ const WritePage = observer(() => {
 
         <Text className='text-right text-overline text-driftwood'>{wordCount}/800</Text>
       </LetterPaper>
-
-      <ArcoCard tone='muted' delay={2}>
-        <SectionHeading
-          eyebrow='写信的时候'
-          title='像把话慢慢放下，而不是急着把它说清'
-          description='越具体的记忆、场景和称呼，越容易让这封回响贴近你真正想念的人。'
-        />
-        <View className='mt-5 flex flex-col gap-3'>
-          <Text className='text-body text-charcoal'>可以先写一个地点、一句常说的话，或者某个你总会想起的小细节。</Text>
-          <Text className='text-body text-charcoal'>如果你现在只写得出短短几句，也没关系，先让这份想念有地方落下。</Text>
-        </View>
-      </ArcoCard>
 
       {sendError ? (
         <ArcoNotice
