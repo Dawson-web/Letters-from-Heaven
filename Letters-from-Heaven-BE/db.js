@@ -55,6 +55,49 @@ const User = sequelize.define(
       type: DataTypes.BIGINT,
       allowNull: false,
     },
+    deliveryPace: {
+      type: DataTypes.STRING(16),
+      allowNull: false,
+      defaultValue: "balanced",
+    },
+    quietStartMinute: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    quietEndMinute: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    reminderEnabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    reminderChannel: {
+      type: DataTypes.STRING(32),
+      allowNull: false,
+      defaultValue: "none",
+    },
+    officialAccountOpenId: {
+      type: DataTypes.STRING(128),
+      allowNull: false,
+      defaultValue: "",
+    },
+    miniProgramTemplateId: {
+      type: DataTypes.STRING(128),
+      allowNull: false,
+      defaultValue: "",
+    },
+    officialAccountTemplateId: {
+      type: DataTypes.STRING(128),
+      allowNull: false,
+      defaultValue: "",
+    },
+    notifyLanguage: {
+      type: DataTypes.STRING(8),
+      allowNull: false,
+      defaultValue: "zh_CN",
+    },
   },
   {
     tableName: "users",
@@ -165,6 +208,36 @@ const Reply = sequelize.define(
     body: {
       type: DataTypes.TEXT("long"),
       allowNull: false,
+    },
+    readAtMs: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+    },
+    favorite: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    archived: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    feedbackScore: {
+      type: DataTypes.STRING(16),
+      allowNull: true,
+    },
+    feedbackReason: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    feedbackAtMs: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+    },
+    notifiedAtMs: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
     },
   },
   {
@@ -290,6 +363,11 @@ const MemorialEvent = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
+    },
+    calendarType: {
+      type: DataTypes.STRING(16),
+      allowNull: false,
+      defaultValue: "solar",
     },
   },
   {

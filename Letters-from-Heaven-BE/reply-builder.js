@@ -4,41 +4,228 @@ const HOUR_MS = 60 * 60 * 1000;
 const HALF_HOUR_MS = 30 * 60 * 1000;
 const TEST_REPLY_DELAY_MS = 90 * 1000;
 const AI_READY_PREVIEW = "你的来信已收到，回响已生成。";
+const DAY_MS = 24 * HOUR_MS;
+const DEFAULT_TIME_ZONE = "Asia/Shanghai";
 
-const LETTER_REPLY_DELAY_WINDOWS = [
-  {
-    weight: 0.35,
-    minMs: 4 * HOUR_MS,
-    maxMs: 12 * HOUR_MS,
-  },
-  {
-    weight: 0.4,
-    minMs: 18 * HOUR_MS,
-    maxMs: 36 * HOUR_MS,
-  },
-  {
-    weight: 0.25,
-    minMs: 2 * 24 * HOUR_MS,
-    maxMs: 5 * 24 * HOUR_MS,
-  },
-];
+const PACE_DELAY_WINDOWS = {
+  fast: [
+    {
+      weight: 0.45,
+      minMs: 1 * HOUR_MS,
+      maxMs: 6 * HOUR_MS,
+    },
+    {
+      weight: 0.4,
+      minMs: 8 * HOUR_MS,
+      maxMs: 18 * HOUR_MS,
+    },
+    {
+      weight: 0.15,
+      minMs: 1 * DAY_MS,
+      maxMs: 2 * DAY_MS,
+    },
+  ],
+  balanced: [
+    {
+      weight: 0.35,
+      minMs: 4 * HOUR_MS,
+      maxMs: 12 * HOUR_MS,
+    },
+    {
+      weight: 0.4,
+      minMs: 18 * HOUR_MS,
+      maxMs: 36 * HOUR_MS,
+    },
+    {
+      weight: 0.25,
+      minMs: 2 * DAY_MS,
+      maxMs: 5 * DAY_MS,
+    },
+  ],
+  slow: [
+    {
+      weight: 0.2,
+      minMs: 12 * HOUR_MS,
+      maxMs: 24 * HOUR_MS,
+    },
+    {
+      weight: 0.45,
+      minMs: 1 * DAY_MS,
+      maxMs: 3 * DAY_MS,
+    },
+    {
+      weight: 0.35,
+      minMs: 3 * DAY_MS,
+      maxMs: 7 * DAY_MS,
+    },
+  ],
+};
 
-function pickWeightedDelayWindow() {
+function getDelayWindowsByPace(pace) {
+  if (pace === "fast" || pace === "slow") {
+    return PACE_DELAY_WINDOWS[pace];
+  }
+
+  return PACE_DELAY_WINDOWS.balanced;
+}
+
+function pickWeightedDelayWindow(pace) {
+  const delayWindows = getDelayWindowsByPace(pace);
   const cursor = Math.random();
   let total = 0;
 
-  for (const window of LETTER_REPLY_DELAY_WINDOWS) {
+  for (const window of delayWindows) {
     total += window.weight;
     if (cursor <= total) {
       return window;
     }
   }
 
-  return LETTER_REPLY_DELAY_WINDOWS[LETTER_REPLY_DELAY_WINDOWS.length - 1];
+  return delayWindows[delayWindows.length - 1];
 }
 
 function roundUpToHalfHour(timestamp) {
   return Math.ceil(timestamp / HALF_HOUR_MS) * HALF_HOUR_MS;
+}
+
+function toMinuteOfDay(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const minute = Number(value);
+  if (!Number.isInteger(minute) || minute < 0 || minute > 1439) {
+    return null;
+  }
+
+  return minute;
+}
+
+function getTimeZoneOffsetMs(date, timeZone) {
+  const dtf = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  const parts = dtf.formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const asUTC = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second)
+  );
+
+  return asUTC - date.getTime();
+}
+
+function getZonedDateParts(date, timeZone) {
+  const dtf = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts = dtf.formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+  return {
+    year: Number(values.year),
+    month: Number(values.month),
+    day: Number(values.day),
+    hour: Number(values.hour),
+    minute: Number(values.minute),
+  };
+}
+
+function makeZonedDateMs({ year, month, day, minuteOfDay }, timeZone) {
+  const hour = Math.floor(minuteOfDay / 60);
+  const minute = minuteOfDay % 60;
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute, 0);
+  const offset = getTimeZoneOffsetMs(new Date(utcGuess), timeZone);
+  return utcGuess - offset;
+}
+
+function isInQuietHours(minuteOfDay, quietStartMinute, quietEndMinute) {
+  if (quietStartMinute === quietEndMinute) {
+    return false;
+  }
+
+  if (quietStartMinute < quietEndMinute) {
+    return minuteOfDay >= quietStartMinute && minuteOfDay < quietEndMinute;
+  }
+
+  return minuteOfDay >= quietStartMinute || minuteOfDay < quietEndMinute;
+}
+
+function shiftToQuietEnd(timestamp, quietStartMinute, quietEndMinute, timeZone) {
+  const parts = getZonedDateParts(new Date(timestamp), timeZone);
+  const minuteOfDay = parts.hour * 60 + parts.minute;
+
+  if (!isInQuietHours(minuteOfDay, quietStartMinute, quietEndMinute)) {
+    return timestamp;
+  }
+
+  // 跨日静默时段：若命中 [quietStart, 24:00)，需要顺延到次日 quietEnd。
+  const shouldShiftToNextDay =
+    quietStartMinute > quietEndMinute && minuteOfDay >= quietStartMinute;
+
+  let target = makeZonedDateMs(
+    {
+      year: parts.year,
+      month: parts.month,
+      day: parts.day,
+      minuteOfDay: quietEndMinute,
+    },
+    timeZone
+  );
+
+  if (shouldShiftToNextDay) {
+    target += DAY_MS;
+  }
+
+  return target <= timestamp ? timestamp + HALF_HOUR_MS : target;
+}
+
+function applyQuietHours(timestamp, options = {}) {
+  const quietStartMinute = toMinuteOfDay(options.quietStartMinute);
+  const quietEndMinute = toMinuteOfDay(options.quietEndMinute);
+  const timeZone = options.timezone || DEFAULT_TIME_ZONE;
+
+  if (quietStartMinute === null || quietEndMinute === null) {
+    return timestamp;
+  }
+
+  if (quietStartMinute === quietEndMinute) {
+    return timestamp;
+  }
+
+  let candidate = timestamp;
+  for (let i = 0; i < 3; i += 1) {
+    const shifted = shiftToQuietEnd(
+      candidate,
+      quietStartMinute,
+      quietEndMinute,
+      timeZone
+    );
+    if (shifted === candidate) {
+      break;
+    }
+    candidate = shifted;
+  }
+
+  return candidate;
 }
 
 function pickLetterAvailableAt(now, options = {}) {
@@ -46,11 +233,11 @@ function pickLetterAvailableAt(now, options = {}) {
     return now + TEST_REPLY_DELAY_MS;
   }
 
-  const window = pickWeightedDelayWindow();
+  const window = pickWeightedDelayWindow(options.deliveryPace);
   const span = Math.max(window.maxMs - window.minMs, 0);
   const offset = span > 0 ? Math.random() * span : 0;
-
-  return roundUpToHalfHour(now + window.minMs + offset);
+  const rounded = roundUpToHalfHour(now + window.minMs + offset);
+  return applyQuietHours(rounded, options);
 }
 
 function excerpt(input) {
@@ -126,6 +313,8 @@ function memorialLabel(event) {
       return "生日回响";
     case "anniversary":
       return "周年回响";
+    case "death_anniversary":
+      return "忌日回响";
     default:
       return event?.label || "纪念回响";
   }

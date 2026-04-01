@@ -4,11 +4,13 @@ const {
   MemorialEvent,
   Letter,
   Reply,
+  User,
 } = require("./db");
 const { AppError } = require("./errors");
 const {
   RELATION_OPTIONS,
   MEMORIAL_EVENT_TYPES,
+  MEMORIAL_CALENDAR_TYPES,
   MEMORIAL_SOURCE_TYPE,
   MEMORIAL_PROFILE_LIMIT,
   REPLY_STATUS,
@@ -21,6 +23,23 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const RETRY_NO_LETTER_MS = 6 * 60 * 60 * 1000;
 const TEST_DELIVERY_MIN_LEAD_MS = 60 * 1000;
 const AI_READY_PREVIEW = "你的来信已收到，回响已生成。";
+const LUNAR_MONTH_MAP = {
+  正月: 1,
+  一月: 1,
+  二月: 2,
+  三月: 3,
+  四月: 4,
+  五月: 5,
+  六月: 6,
+  七月: 7,
+  八月: 8,
+  九月: 9,
+  十月: 10,
+  十一月: 11,
+  冬月: 11,
+  十二月: 12,
+  腊月: 12,
+};
 
 function createId(prefix) {
   const random = Math.random().toString(36).slice(2, 8);
@@ -48,8 +67,27 @@ function ensureEventType(type) {
   }
 }
 
-function ensureMonthDay(month, day) {
-  if (month < 1 || month > 12 || day < 1 || day > 31) {
+function ensureCalendarType(calendarType) {
+  if (!calendarType || !MEMORIAL_CALENDAR_TYPES.includes(calendarType)) {
+    throw new AppError(400, "Invalid memorial calendar type", {
+      calendarTypes: MEMORIAL_CALENDAR_TYPES,
+    });
+  }
+}
+
+function ensureMonthDay(month, day, calendarType = "solar") {
+  if (month < 1 || month > 12 || day < 1) {
+    throw new AppError(400, "Invalid event date");
+  }
+
+  if (calendarType === "lunar") {
+    if (day > 30) {
+      throw new AppError(400, "Invalid lunar event date");
+    }
+    return;
+  }
+
+  if (day > 31) {
     throw new AppError(400, "Invalid event date");
   }
 }
@@ -125,58 +163,234 @@ function getZonedDateParts(date, timeZone) {
   };
 }
 
-function computeNextWindow(event, timeZone, nowMs) {
-  const now = new Date(nowMs);
-  const { year } = getZonedDateParts(now, timeZone);
+function getZonedMinuteOfDay(date, timeZone) {
+  const dtf = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts = dtf.formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return Number(values.hour) * 60 + Number(values.minute);
+}
 
-  const baseMs = makeZonedDateMs(
-    {
-      year,
-      month: event.month,
-      day: event.day,
-      hour: event.deliverAtHour,
-      minute: event.deliverAtMinute,
-    },
-    timeZone
-  );
-
-  const windowStartMs = baseMs + event.windowStartDays * DAY_MS;
-  const windowEndMs = baseMs + event.windowEndDays * DAY_MS;
-
-  if (windowEndMs >= nowMs) {
-    return {
-      year,
-      windowStartMs,
-      windowEndMs,
-    };
+function toMinuteOfDay(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
   }
 
-  const nextYear = year + 1;
-  const nextBaseMs = makeZonedDateMs(
+  const minute = Number(value);
+  if (!Number.isInteger(minute) || minute < 0 || minute > 1439) {
+    return null;
+  }
+
+  return minute;
+}
+
+function isInQuietHours(minuteOfDay, quietStartMinute, quietEndMinute) {
+  if (quietStartMinute === quietEndMinute) {
+    return false;
+  }
+
+  if (quietStartMinute < quietEndMinute) {
+    return minuteOfDay >= quietStartMinute && minuteOfDay < quietEndMinute;
+  }
+
+  return minuteOfDay >= quietStartMinute || minuteOfDay < quietEndMinute;
+}
+
+function applyQuietHours(candidateMs, deliveryOptions = {}, timeZone) {
+  const quietStartMinute = toMinuteOfDay(deliveryOptions.quietStartMinute);
+  const quietEndMinute = toMinuteOfDay(deliveryOptions.quietEndMinute);
+  if (quietStartMinute === null || quietEndMinute === null) {
+    return candidateMs;
+  }
+
+  if (quietStartMinute === quietEndMinute) {
+    return candidateMs;
+  }
+
+  const zoned = getZonedDateParts(new Date(candidateMs), timeZone);
+  const minuteOfDay = getZonedMinuteOfDay(new Date(candidateMs), timeZone);
+  if (!isInQuietHours(minuteOfDay, quietStartMinute, quietEndMinute)) {
+    return candidateMs;
+  }
+
+  const shouldShiftToNextDay =
+    quietStartMinute > quietEndMinute && minuteOfDay >= quietStartMinute;
+
+  let shifted = makeZonedDateMs(
     {
-      year: nextYear,
-      month: event.month,
-      day: event.day,
-      hour: event.deliverAtHour,
-      minute: event.deliverAtMinute,
+      year: zoned.year,
+      month: zoned.month,
+      day: zoned.day,
+      hour: Math.floor(quietEndMinute / 60),
+      minute: quietEndMinute % 60,
     },
     timeZone
   );
+
+  if (shouldShiftToNextDay) {
+    shifted += DAY_MS;
+  }
+
+  return shifted <= candidateMs ? candidateMs + 30 * 60 * 1000 : shifted;
+}
+
+function parseLunarMonthName(monthName) {
+  const raw = String(monthName || "");
+  const isLeap = raw.startsWith("闰");
+  const normalized = isLeap ? raw.slice(1) : raw;
   return {
-    year: nextYear,
-    windowStartMs: nextBaseMs + event.windowStartDays * DAY_MS,
-    windowEndMs: nextBaseMs + event.windowEndDays * DAY_MS,
+    month: LUNAR_MONTH_MAP[normalized] || 0,
+    isLeap,
   };
 }
 
-function pickAvailableAt(windowStartMs, windowEndMs, nowMs) {
-  if (windowEndMs <= windowStartMs) {
-    return Math.max(windowEndMs, nowMs);
+function getLunarDateParts(date, timeZone) {
+  const dtf = new Intl.DateTimeFormat("zh-Hans-CN-u-ca-chinese", {
+    timeZone,
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const parts = dtf.formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const monthMeta = parseLunarMonthName(values.month);
+
+  return {
+    relatedYear: Number(values.relatedYear || values.year || 0),
+    month: monthMeta.month,
+    day: Number(values.day || 0),
+    isLeap: monthMeta.isLeap,
+  };
+}
+
+function findSolarDateForLunarYear(targetLunarYear, month, day, timeZone) {
+  // 覆盖春节前后的跨年区间，确保能找到当农历年对应的公历日期。
+  const startMs = Date.UTC(targetLunarYear - 1, 11, 1, 0, 0, 0);
+  const endMs = Date.UTC(targetLunarYear, 11, 31, 23, 59, 59);
+
+  for (let cursor = startMs; cursor <= endMs; cursor += DAY_MS) {
+    const date = new Date(cursor);
+    const lunar = getLunarDateParts(date, timeZone);
+    if (
+      lunar.relatedYear === targetLunarYear &&
+      lunar.month === month &&
+      lunar.day === day &&
+      !lunar.isLeap
+    ) {
+      return getZonedDateParts(date, timeZone);
+    }
   }
 
-  const offset = Math.floor(Math.random() * (windowEndMs - windowStartMs));
+  return null;
+}
+
+function resolveBaseDateMsForYear(event, targetYear, timeZone) {
+  const calendarType = normalizeText(event.calendarType, 16) || "solar";
+  if (calendarType === "lunar") {
+    const solarDate = findSolarDateForLunarYear(
+      targetYear,
+      Number(event.month),
+      Number(event.day),
+      timeZone
+    );
+    if (!solarDate) {
+      return null;
+    }
+
+    return makeZonedDateMs(
+      {
+        year: solarDate.year,
+        month: solarDate.month,
+        day: solarDate.day,
+        hour: event.deliverAtHour,
+        minute: event.deliverAtMinute,
+      },
+      timeZone
+    );
+  }
+
+  return makeZonedDateMs(
+    {
+      year: targetYear,
+      month: event.month,
+      day: event.day,
+      hour: event.deliverAtHour,
+      minute: event.deliverAtMinute,
+    },
+    timeZone
+  );
+}
+
+function buildWindowForYear(event, targetYear, timeZone) {
+  const baseMs = resolveBaseDateMsForYear(event, targetYear, timeZone);
+  if (!baseMs) {
+    return null;
+  }
+
+  return {
+    year: targetYear,
+    windowStartMs: baseMs + event.windowStartDays * DAY_MS,
+    windowEndMs: baseMs + event.windowEndDays * DAY_MS,
+  };
+}
+
+function computeNextWindow(event, timeZone, nowMs) {
+  const now = new Date(nowMs);
+  const calendarType = normalizeText(event.calendarType, 16) || "solar";
+  const { year: solarYear } = getZonedDateParts(now, timeZone);
+  const currentLunarYear = getLunarDateParts(now, timeZone).relatedYear || solarYear;
+  const currentYear = calendarType === "lunar" ? currentLunarYear : solarYear;
+
+  const currentWindow = buildWindowForYear(event, currentYear, timeZone);
+  if (!currentWindow) {
+    return {
+      year: currentYear,
+      windowStartMs: nowMs,
+      windowEndMs: nowMs,
+    };
+  }
+
+  if (currentWindow.windowEndMs >= nowMs) {
+    return currentWindow;
+  }
+
+  const nextYear = currentYear + 1;
+  const nextWindow = buildWindowForYear(event, nextYear, timeZone);
+  if (!nextWindow) {
+    return {
+      year: nextYear,
+      windowStartMs: nowMs + DAY_MS,
+      windowEndMs: nowMs + DAY_MS,
+    };
+  }
+
+  return nextWindow;
+}
+
+function pickAvailableAt(windowStartMs, windowEndMs, nowMs, deliveryOptions = {}, timeZone = "Asia/Shanghai") {
+  if (windowEndMs <= windowStartMs) {
+    return applyQuietHours(Math.max(windowEndMs, nowMs), deliveryOptions, timeZone);
+  }
+
+  const pace = normalizeText(deliveryOptions.deliveryPace, 16) || "balanced";
+  const span = windowEndMs - windowStartMs;
+  let minRate = 0;
+  let maxRate = 1;
+  if (pace === "fast") {
+    minRate = 0;
+    maxRate = 0.45;
+  } else if (pace === "slow") {
+    minRate = 0.55;
+    maxRate = 1;
+  }
+
+  const offset = Math.floor((minRate + Math.random() * (maxRate - minRate)) * span);
   const candidate = windowStartMs + offset;
-  return candidate < nowMs ? nowMs : candidate;
+  return applyQuietHours(candidate < nowMs ? nowMs : candidate, deliveryOptions, timeZone);
 }
 
 function serializeReply(reply) {
@@ -209,6 +423,12 @@ function serializeReply(reply) {
     subject: reply.subject,
     preview: reply.preview,
     body: reply.body,
+    readAt: reply.readAtMs ? Number(reply.readAtMs) : null,
+    favorite: Boolean(reply.favorite),
+    archived: Boolean(reply.archived),
+    feedbackScore: normalizeText(reply.feedbackScore, 16) || null,
+    feedbackReason: normalizeText(reply.feedbackReason, 255) || "",
+    feedbackAt: reply.feedbackAtMs ? Number(reply.feedbackAtMs) : null,
   };
 }
 
@@ -356,16 +576,19 @@ async function createMemorialEvent(userContext, profileId, payload = {}) {
 
   const type = normalizeText(payload.type, 16);
   ensureEventType(type);
+  let calendarType = normalizeText(payload.calendarType, 16) || "solar";
+  ensureCalendarType(calendarType);
 
   let month = Number(payload.month);
   let day = Number(payload.day);
 
   if (type === "qingming") {
+    calendarType = "solar";
     month = 4;
     day = 4;
   }
 
-  ensureMonthDay(month, day);
+  ensureMonthDay(month, day, calendarType);
 
   const label = normalizeText(payload.label, 32);
   const windowStartDays = Number(payload.windowStartDays ?? -1);
@@ -383,6 +606,7 @@ async function createMemorialEvent(userContext, profileId, payload = {}) {
     {
       month,
       day,
+      calendarType,
       deliverAtHour,
       deliverAtMinute,
       windowStartDays,
@@ -398,6 +622,7 @@ async function createMemorialEvent(userContext, profileId, payload = {}) {
     type,
     month,
     day,
+    calendarType,
     label,
     windowStartDays,
     windowEndDays,
@@ -430,15 +655,26 @@ async function updateMemorialEvent(userContext, eventId, payload = {}) {
     ensureEventType(type);
     event.type = type;
     if (type === "qingming") {
+      event.calendarType = "solar";
       event.month = 4;
       event.day = 4;
     }
   }
 
+  if (payload.calendarType !== undefined && event.type !== "qingming") {
+    const calendarType = normalizeText(payload.calendarType, 16) || "solar";
+    ensureCalendarType(calendarType);
+    event.calendarType = calendarType;
+  }
+
   if (payload.month !== undefined || payload.day !== undefined) {
-    const month = Number(payload.month ?? event.month);
-    const day = Number(payload.day ?? event.day);
-    ensureMonthDay(month, day);
+    const month = event.type === "qingming"
+      ? 4
+      : Number(payload.month ?? event.month);
+    const day = event.type === "qingming"
+      ? 4
+      : Number(payload.day ?? event.day);
+    ensureMonthDay(month, day, event.calendarType || "solar");
     event.month = month;
     event.day = day;
   }
@@ -586,6 +822,13 @@ async function triggerMemorialReplies() {
       continue;
     }
 
+    const user = await User.findByPk(profile.userId);
+    const deliveryOptions = {
+      deliveryPace: normalizeText(user?.deliveryPace, 16) || "balanced",
+      quietStartMinute: user?.quietStartMinute,
+      quietEndMinute: user?.quietEndMinute,
+    };
+
     const window = computeNextWindow(event, profile.timezone || "Asia/Shanghai", now);
     if (event.lastTriggeredYear >= window.year) {
       event.nextTriggerAtMs = window.windowStartMs;
@@ -605,7 +848,9 @@ async function triggerMemorialReplies() {
     const availableAtMs = pickAvailableAt(
       window.windowStartMs,
       window.windowEndMs,
-      now
+      now,
+      deliveryOptions,
+      profile.timezone || "Asia/Shanghai"
     );
     const waitingPayload = buildMemorialWaitingPayload(
       profile,
@@ -635,6 +880,7 @@ async function triggerMemorialReplies() {
       {
         month: event.month,
         day: event.day,
+        calendarType: event.calendarType,
         deliverAtHour: event.deliverAtHour,
         deliverAtMinute: event.deliverAtMinute,
         windowStartDays: event.windowStartDays,

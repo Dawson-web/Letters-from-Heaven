@@ -8,6 +8,7 @@ import { ArcoCard } from '@/components/arco/card';
 import { ArcoEmpty } from '@/components/arco/empty';
 import { LoadingState } from '@/components/arco/loading-state';
 import { ArcoNotice } from '@/components/arco/notice';
+import { ArcoTag } from '@/components/arco/tag';
 import { PageShell } from '@/components/layout/page-shell';
 import { getErrorMessage } from '@/services/request';
 import { useRootStore } from '@/stores/root-store';
@@ -15,15 +16,33 @@ import type { ReplyRecord } from '@/types/mail';
 import { cn } from '@/utils/cn';
 import { formatDateTime, formatRemaining } from '@/utils/time';
 
+type StatusFilter = 'all' | 'ready' | 'waiting'
+type ScopeFilter = 'active' | 'favorite' | 'archived'
+
+const STATUS_FILTER_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
+  { value: 'all', label: '全部状态' },
+  { value: 'ready', label: '只看已抵达' },
+  { value: 'waiting', label: '只看路上' },
+]
+
+const SCOPE_FILTER_OPTIONS: Array<{ value: ScopeFilter; label: string }> = [
+  { value: 'active', label: '常看信件' },
+  { value: 'favorite', label: '收藏信件' },
+  { value: 'archived', label: '归档信件' },
+]
+
 const InboxPage = observer(() => {
   const { mailboxStore, memorialStore } = useRootStore();
   const [editingReplyId, setEditingReplyId] = useState('');
   const [subjectDraft, setSubjectDraft] = useState('');
   const [savingReplyId, setSavingReplyId] = useState('');
   const [deletingReplyId, setDeletingReplyId] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('active');
 
   useDidShow(() => {
-    void mailboxStore.refreshReplies();
+    void mailboxStore.refreshReplies(true);
     void memorialStore.refreshOverview();
   });
 
@@ -40,16 +59,85 @@ const InboxPage = observer(() => {
         return '生日回响';
       case 'anniversary':
         return '周年回响';
+      case 'death_anniversary':
+        return '忌日回响';
       default:
         return event.label || '纪念回响';
     }
   };
 
   const handleOpenReply = (replyId: string) => {
+    const reply = mailboxStore.getReply(replyId);
+    if (reply?.status === 'ready' && !reply.readAt) {
+      void mailboxStore.markReplyRead(replyId, true);
+    }
+
     Taro.navigateTo({
       url: `/pages/reply/index?id=${replyId}`,
     });
   };
+
+  const handleToggleFavorite = async (reply: ReplyRecord) => {
+    try {
+      await mailboxStore.toggleReplyFavorite(reply.id, !Boolean(reply.favorite));
+      Taro.showToast({ title: reply.favorite ? '已取消收藏' : '已加入收藏', icon: 'none' });
+    } catch (error) {
+      Taro.showToast({ title: getErrorMessage(error), icon: 'none' });
+    }
+  };
+
+  const handleToggleArchived = async (reply: ReplyRecord) => {
+    try {
+      await mailboxStore.toggleReplyArchived(reply.id, !Boolean(reply.archived));
+      Taro.showToast({ title: reply.archived ? '已移回常看' : '已放入归档', icon: 'none' });
+    } catch (error) {
+      Taro.showToast({ title: getErrorMessage(error), icon: 'none' });
+    }
+  };
+
+  const handleToggleRead = async (reply: ReplyRecord) => {
+    try {
+      await mailboxStore.markReplyRead(reply.id, !Boolean(reply.readAt));
+      Taro.showToast({ title: reply.readAt ? '已标记为未读' : '已标记为已读', icon: 'none' });
+    } catch (error) {
+      Taro.showToast({ title: getErrorMessage(error), icon: 'none' });
+    }
+  };
+
+  const visibleReplies = mailboxStore.inboxItems.filter((reply) => {
+    const keyword = searchKeyword.trim().toLowerCase();
+    if (scopeFilter === 'favorite' && !reply.favorite) {
+      return false;
+    }
+
+    if (scopeFilter === 'archived' && !reply.archived) {
+      return false;
+    }
+
+    if (scopeFilter === 'active' && reply.archived) {
+      return false;
+    }
+
+    if (statusFilter === 'ready' && reply.status !== 'ready') {
+      return false;
+    }
+
+    if (statusFilter === 'waiting' && reply.status !== 'waiting') {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    const memorialLabel = reply.sourceType === 'memorial'
+      ? getMemorialLabel(reply.memorialEventId)
+      : '日常回响';
+    return [reply.subject, reply.preview, reply.body, memorialLabel]
+      .join(' ')
+      .toLowerCase()
+      .includes(keyword);
+  });
 
   const handleStartRename = (reply: ReplyRecord) => {
     setEditingReplyId(reply.id);
@@ -231,23 +319,60 @@ const InboxPage = observer(() => {
 
       {mailboxStore.lastError ? (
         <View>
-          <ArcoButton variant='text' onClick={() => void mailboxStore.refreshReplies()}>
+          <ArcoButton variant='text' onClick={() => void mailboxStore.refreshReplies(true)}>
             再试着同步一次
           </ArcoButton>
         </View>
       ) : null}
 
-      {mailboxStore.syncing && mailboxStore.inboxItems.length === 0 ? (
+      <ArcoCard tone='default' padding='md' delay={2}>
+        <View className='flex flex-col gap-4'>
+          <Input
+            className='field-control'
+            placeholder='搜索标题、正文或纪念类型'
+            placeholderStyle='color: #B5AB9C'
+            value={searchKeyword}
+            onInput={(event) => setSearchKeyword(event.detail.value)}
+          />
+          <View className='flex flex-wrap gap-2'>
+            {STATUS_FILTER_OPTIONS.map((item) => (
+              <ArcoTag
+                key={item.value}
+                active={statusFilter === item.value}
+                onClick={() => setStatusFilter(item.value)}
+              >
+                {item.label}
+              </ArcoTag>
+            ))}
+          </View>
+          <View className='flex flex-wrap gap-2'>
+            {SCOPE_FILTER_OPTIONS.map((item) => (
+              <ArcoTag
+                key={item.value}
+                active={scopeFilter === item.value}
+                onClick={() => setScopeFilter(item.value)}
+              >
+                {item.label}
+              </ArcoTag>
+            ))}
+          </View>
+          <Text className='text-caption text-driftwood'>
+            当前筛出 {visibleReplies.length} 封信
+          </Text>
+        </View>
+      </ArcoCard>
+
+      {mailboxStore.syncing && visibleReplies.length === 0 ? (
         <LoadingState text='正在替你看看有没有新的回响…' />
-      ) : mailboxStore.inboxItems.length === 0 ? (
+      ) : visibleReplies.length === 0 ? (
         <ArcoEmpty
-          title='这里暂时还是安静的'
-          description='等你写下第一封信之后，回响和等待都会慢慢在这里出现。'
+          title='没有符合当前筛选的回响'
+          description='你可以放宽筛选条件，或者去写一封新的信。'
           actionText='去写第一封信'
           onAction={() => Taro.navigateTo({ url: '/pages/write/index' })}
         />
       ) : (
-        mailboxStore.inboxItems.map((reply, index) => {
+        visibleReplies.map((reply, index) => {
           const isReady = reply.status === 'ready';
           const hasGeneratedBody = reply.body.trim().length > 0;
           const aiGenerated = typeof reply.aiGenerated === 'boolean'
@@ -296,6 +421,17 @@ const InboxPage = observer(() => {
                     <Text className='inbox-mail-chip'>
                       {aiGenerated ? 'AI 生成' : aiGenerating ? 'AI 生成中' : '系统模板'}
                     </Text>
+                    {reply.favorite ? (
+                      <Text className='inbox-mail-chip'>已收藏</Text>
+                    ) : null}
+                    {reply.archived ? (
+                      <Text className='inbox-mail-chip'>已归档</Text>
+                    ) : null}
+                    {reply.readAt ? (
+                      <Text className='inbox-mail-chip'>已读</Text>
+                    ) : (
+                      <Text className='inbox-mail-chip'>未读</Text>
+                    )}
                   </View>
                 </View>
 
@@ -323,6 +459,15 @@ const InboxPage = observer(() => {
                     </ArcoButton>
                     <ArcoButton variant='text' size='sm' onClick={() => handleStartRename(reply)}>
                       改标题
+                    </ArcoButton>
+                    <ArcoButton variant='text' size='sm' onClick={() => void handleToggleRead(reply)}>
+                      {reply.readAt ? '标为未读' : '标为已读'}
+                    </ArcoButton>
+                    <ArcoButton variant='text' size='sm' onClick={() => void handleToggleFavorite(reply)}>
+                      {reply.favorite ? '取消收藏' : '收藏'}
+                    </ArcoButton>
+                    <ArcoButton variant='text' size='sm' onClick={() => void handleToggleArchived(reply)}>
+                      {reply.archived ? '移出归档' : '归档'}
                     </ArcoButton>
                     <ArcoButton
                       variant='text'

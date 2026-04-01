@@ -33,9 +33,21 @@ export interface CreateLetterRequest extends LetterDraft {
   testMode?: boolean
 }
 
-export function fetchMailbox() {
+export interface MailboxQuery {
+  includeArchived?: boolean
+}
+
+function withMailboxQuery(path: string, query?: MailboxQuery) {
+  if (!query || query.includeArchived === undefined) {
+    return path
+  }
+
+  return `${path}?includeArchived=${query.includeArchived ? 'true' : 'false'}`
+}
+
+export function fetchMailbox(query?: MailboxQuery) {
   return apiRequest<MailboxPayload>({
-    path: '/api/mailbox',
+    path: withMailboxQuery('/api/mailbox', query),
   })
 }
 
@@ -53,8 +65,15 @@ export function fetchReplyDetail(replyId: string) {
   })
 }
 
-export function updateReply(replyId: string, payload: Pick<ReplyRecord, 'subject'>) {
-  return apiRequest<ReplyRecord, Pick<ReplyRecord, 'subject'>>({
+export type UpdateReplyRequest = Partial<
+  Pick<
+    ReplyRecord,
+    'subject' | 'readAt' | 'favorite' | 'archived' | 'feedbackScore' | 'feedbackReason'
+  >
+>
+
+export function updateReply(replyId: string, payload: UpdateReplyRequest) {
+  return apiRequest<ReplyRecord, UpdateReplyRequest>({
     path: `/api/replies/${replyId}`,
     method: 'PATCH',
     data: payload,

@@ -11,6 +11,7 @@ export type RelationOption =
 
 export type ReplyStatus = 'waiting' | 'ready'
 export type ReplySourceType = 'letter' | 'memorial'
+export type ReplyFeedbackScore = 'match' | 'neutral' | 'mismatch'
 
 export interface LetterDraft {
   title: string
@@ -44,6 +45,12 @@ export interface ReplyRecord {
   subject: string
   preview: string
   body: string
+  readAt?: number | null
+  favorite?: boolean
+  archived?: boolean
+  feedbackScore?: ReplyFeedbackScore | null
+  feedbackReason?: string
+  feedbackAt?: number | null
 }
 
 export interface PersistedMailboxState {

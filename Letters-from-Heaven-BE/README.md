@@ -140,6 +140,37 @@ CLOUDBASE_AI_MODEL_GROUP=hunyuan-exp
 CLOUDBASE_AI_MODEL=hunyuan-turbos-latest
 ```
 
+## 回响提醒（新增）
+
+回响从 `waiting` 结算为 `ready` 后，可按用户偏好触发提醒通道：
+
+- `mini_program_subscribe`（小程序订阅消息）
+- `official_account`（公众号模板消息）
+
+> 注意：公众号提醒需要用户在公众号侧完成关注与身份绑定，服务端拿到 `officialAccountOpenId` 后才能发送。
+
+### 小程序订阅消息环境变量
+
+- `WECHAT_MINI_APP_ID`
+- `WECHAT_MINI_APP_SECRET`
+- `REMINDER_MINI_TEMPLATE_ID`（可选，用户未单独配置模板时使用）
+- `REMINDER_MINI_PAGE`（可选，默认 `/pages/reply/index?id=xxx`）
+
+### 公众号模板消息环境变量
+
+- `WECHAT_OA_APP_ID`
+- `WECHAT_OA_APP_SECRET`
+- `REMINDER_OA_TEMPLATE_ID`（可选，用户未单独配置模板时使用）
+- `REMINDER_OFFICIAL_FALLBACK_MINI`（可选，设为 `true` 时公众号发送失败后回退小程序提醒）
+
+### 定时任务建议
+
+建议额外配置一个定时任务调用：
+
+- `POST /api/jobs/replies/settle`
+
+该任务会把已到期的 `waiting` 回响结算为 `ready`，并尝试发送提醒。
+
 
 ## License
 

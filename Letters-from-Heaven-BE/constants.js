@@ -19,6 +19,7 @@ const MEMORIAL_EVENT_TYPES = [
   "qingming",
   "birthday",
   "anniversary",
+  "death_anniversary",
   "custom",
 ];
 
@@ -28,6 +29,17 @@ const MEMORIAL_SOURCE_TYPE = {
 };
 
 const MEMORIAL_PROFILE_LIMIT = 5;
+const MEMORIAL_CALENDAR_TYPES = ["solar", "lunar"];
+
+const DELIVERY_PACE_OPTIONS = ["fast", "balanced", "slow"];
+
+const REMINDER_CHANNEL_OPTIONS = [
+  "none",
+  "mini_program_subscribe",
+  "official_account",
+];
+
+const FEEDBACK_SCORE_OPTIONS = ["match", "neutral", "mismatch"];
 
 module.exports = {
   RELATION_OPTIONS,
@@ -35,4 +47,8 @@ module.exports = {
   MEMORIAL_EVENT_TYPES,
   MEMORIAL_SOURCE_TYPE,
   MEMORIAL_PROFILE_LIMIT,
+  MEMORIAL_CALENDAR_TYPES,
+  DELIVERY_PACE_OPTIONS,
+  REMINDER_CHANNEL_OPTIONS,
+  FEEDBACK_SCORE_OPTIONS,
 };

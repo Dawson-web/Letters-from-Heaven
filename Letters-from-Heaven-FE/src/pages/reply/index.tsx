@@ -1,6 +1,6 @@
-import { Text, View } from '@tarojs/components';
+import { Image, Input, Text, View } from '@tarojs/components';
 import Taro, { useDidShow, useRouter } from '@tarojs/taro';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 
 import { EnvelopeOpen } from '@/components/animation/envelope-open';
@@ -10,9 +10,19 @@ import { ArcoEmpty } from '@/components/arco/empty';
 import { LetterPaper } from '@/components/arco/letter-paper';
 import { LoadingState } from '@/components/arco/loading-state';
 import { SectionHeading } from '@/components/arco/section-heading';
+import { ArcoTag } from '@/components/arco/tag';
 import { PageShell } from '@/components/layout/page-shell';
+import { generateImageByCloudFunction } from '@/services/ai';
+import { getErrorMessage } from '@/services/request';
 import { useRootStore } from '@/stores/root-store';
+import type { ReplyFeedbackScore } from '@/types/mail';
 import { formatDateTime, formatRemaining } from '@/utils/time';
+
+const FEEDBACK_OPTIONS: Array<{ value: ReplyFeedbackScore; label: string }> = [
+  { value: 'match', label: '很贴近' },
+  { value: 'neutral', label: '还可以' },
+  { value: 'mismatch', label: '不太贴近' },
+];
 
 const ReplyPage = observer(() => {
   const { params } = useRouter();
@@ -21,10 +31,27 @@ const ReplyPage = observer(() => {
   const letter = mailboxStore.getLetter(reply?.sourceLetterId || reply?.letterId);
   const [showOpenAnim, setShowOpenAnim] = useState(true);
   const [contentRevealed, setContentRevealed] = useState(false);
+  const [feedbackReason, setFeedbackReason] = useState('');
+  const [savingFeedback, setSavingFeedback] = useState(false);
+  const [generatingPostcard, setGeneratingPostcard] = useState(false);
+  const [postcardUrls, setPostcardUrls] = useState<string[]>([]);
+  const [postcardError, setPostcardError] = useState('');
 
   useDidShow(() => {
-    void mailboxStore.refreshReplyDetail(params.id);
+    void mailboxStore.refreshReplyDetail(params.id).then((currentReply) => {
+      if (currentReply?.status === 'ready' && !currentReply.readAt) {
+        void mailboxStore.markReplyRead(currentReply.id, true);
+      }
+    });
   });
+
+  useEffect(() => {
+    if (!reply) {
+      return;
+    }
+
+    setFeedbackReason(reply.feedbackReason || '');
+  }, [reply]);
 
   const getMemorialLabel = (eventId?: string | null) => {
     const event = memorialStore.getEvent(eventId);
@@ -39,8 +66,87 @@ const ReplyPage = observer(() => {
         return '生日回响';
       case 'anniversary':
         return '周年回响';
+      case 'death_anniversary':
+        return '忌日回响';
       default:
         return event.label || '纪念回响';
+    }
+  };
+
+  const handleSaveFeedback = async (score: ReplyFeedbackScore) => {
+    if (!reply || savingFeedback) {
+      return;
+    }
+
+    setSavingFeedback(true);
+    try {
+      await mailboxStore.updateReplyFeedback(reply.id, score, feedbackReason.trim());
+      Taro.showToast({ title: '谢谢反馈，后续回响会继续调整', icon: 'none' });
+    } catch (error) {
+      Taro.showToast({ title: getErrorMessage(error), icon: 'none' });
+    } finally {
+      setSavingFeedback(false);
+    }
+  };
+
+  const handleGeneratePostcard = async () => {
+    if (!reply || generatingPostcard) {
+      return;
+    }
+
+    setGeneratingPostcard(true);
+    setPostcardError('');
+
+    try {
+      const prompt = [
+        '把以下书信内容设计为温柔克制的纪念明信片插画。',
+        '风格要求：暖色、纸张质感、留白、无人物正脸、中文书信氛围。',
+        `标题：${reply.subject}`,
+        `正文摘录：${reply.body.slice(0, 240)}`,
+      ].join('\n');
+
+      const result = await generateImageByCloudFunction({
+        prompt,
+        count: 1,
+        size: '1024x1024',
+      });
+      const urls = result.images
+        .map((item) => item.tempFileURL || item.originURL || '')
+        .filter(Boolean);
+
+      if (!urls.length) {
+        setPostcardError('暂时没有生成可预览的图片，请稍后再试。');
+        return;
+      }
+
+      setPostcardUrls(urls);
+      Taro.showToast({ title: '纪念画片已生成', icon: 'none' });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      setPostcardError(message);
+      Taro.showToast({ title: message, icon: 'none' });
+    } finally {
+      setGeneratingPostcard(false);
+    }
+  };
+
+  const handleSaveFeedbackReason = async () => {
+    if (!reply || savingFeedback) {
+      return;
+    }
+
+    setSavingFeedback(true);
+    try {
+      await mailboxStore.updateReplyFeedback(
+        reply.id,
+        reply.feedbackScore || 'neutral',
+        feedbackReason.trim()
+      );
+      Taro.showToast({ title: '补充说明已保存', icon: 'none' });
+    } catch (error) {
+      Taro.showToast({ title: getErrorMessage(error), icon: 'none' });
+    } finally {
+      setSavingFeedback(false);
     }
   };
 
@@ -206,6 +312,83 @@ const ReplyPage = observer(() => {
           ))}
         </View>
       </LetterPaper>
+
+      <ArcoCard tone='default' padding='lg' delay={2}>
+        <SectionHeading
+          eyebrow='回响反馈'
+          title='告诉我们这封回响和你的感受是否贴近'
+          description='你的反馈会影响后续写回风格，让它更接近你真正的记忆线索。'
+        />
+        <View className='mt-5 flex flex-wrap gap-2'>
+          {FEEDBACK_OPTIONS.map((item) => (
+            <ArcoTag
+              key={item.value}
+              active={reply.feedbackScore === item.value}
+              onClick={() => void handleSaveFeedback(item.value)}
+            >
+              {item.label}
+            </ArcoTag>
+          ))}
+        </View>
+        <View className='mt-4 flex flex-col gap-3'>
+          <Input
+            className='field-control'
+            maxlength={255}
+            placeholder='可选：补充一句你希望它更贴近的点'
+            placeholderStyle='color: #B5AB9C'
+            value={feedbackReason}
+            onInput={(event) => setFeedbackReason(event.detail.value)}
+          />
+          <ArcoButton
+            variant='outline'
+            loading={savingFeedback}
+            disabled={!reply.feedbackScore && !feedbackReason.trim()}
+            onClick={() => void handleSaveFeedbackReason()}
+          >
+            保存补充说明
+          </ArcoButton>
+        </View>
+      </ArcoCard>
+
+      <ArcoCard tone='muted' padding='lg' delay={3}>
+        <SectionHeading
+          eyebrow='纪念画片'
+          title='把这封回响生成一张可保存的纪念明信片'
+          description='这张图只用于纪念表达，不代表逝者真实影像。'
+        />
+        <View className='mt-5 flex flex-col gap-4'>
+          <ArcoButton
+            loading={generatingPostcard}
+            onClick={() => void handleGeneratePostcard()}
+          >
+            {generatingPostcard ? '正在生成纪念画片…' : '生成纪念画片'}
+          </ArcoButton>
+          {postcardError ? (
+            <Text className='text-caption text-terracotta'>{postcardError}</Text>
+          ) : null}
+          {postcardUrls.length > 0 ? (
+            <View className='flex flex-col gap-3'>
+              {postcardUrls.map((url) => (
+                <Image
+                  key={url}
+                  mode='widthFix'
+                  src={url}
+                  style='width: 100%; border-radius: 16px; overflow: hidden;'
+                  onClick={() =>
+                    Taro.previewImage({
+                      current: url,
+                      urls: postcardUrls,
+                    })
+                  }
+                />
+              ))}
+              <Text className='text-caption text-driftwood'>
+                点击图片可预览或长按保存。
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      </ArcoCard>
 
     </PageShell>
   );

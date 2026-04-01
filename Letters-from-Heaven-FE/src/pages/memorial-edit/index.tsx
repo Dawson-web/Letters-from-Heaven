@@ -12,17 +12,24 @@ import { PageShell } from '@/components/layout/page-shell';
 import { RELATION_OPTIONS } from '@/constants/relations';
 import { getErrorMessage } from '@/services/request';
 import { useRootStore } from '@/stores/root-store';
-import type { MemorialEvent, MemorialEventType } from '@/types/memorial';
+import type { MemorialCalendarType, MemorialEvent, MemorialEventType } from '@/types/memorial';
 import { formatDateTime } from '@/utils/time';
 
 const EVENT_TYPES: { type: MemorialEventType; label: string }[] = [
   { type: 'qingming', label: '清明' },
   { type: 'birthday', label: '生日' },
   { type: 'anniversary', label: '周年' },
+  { type: 'death_anniversary', label: '忌日' },
   { type: 'custom', label: '自定义' },
+];
+const CALENDAR_TYPES: Array<{ value: MemorialCalendarType; label: string }> = [
+  { value: 'solar', label: '公历' },
+  { value: 'lunar', label: '农历' },
 ];
 
 const WINDOW_VALUES = Array.from({ length: 29 }, (_, index) => index - 14);
+const LUNAR_MONTH_VALUES = Array.from({ length: 12 }, (_, index) => index + 1);
+const LUNAR_DAY_VALUES = Array.from({ length: 30 }, (_, index) => index + 1);
 const WINDOW_PRESETS = [
   { label: '只在当天', start: 0, end: 0 },
   { label: '前后 1 天', start: -1, end: 1 },
@@ -31,6 +38,7 @@ const WINDOW_PRESETS = [
 
 const DEFAULT_EVENT = {
   type: 'qingming' as MemorialEventType,
+  calendarType: 'solar' as MemorialCalendarType,
   month: 4,
   day: 4,
   label: '',
@@ -49,7 +57,11 @@ function getCurrentYear() {
   return new Date().getFullYear();
 }
 
-function formatMonthDay(month: number, day: number) {
+function formatMonthDay(month: number, day: number, calendarType: MemorialCalendarType = 'solar') {
+  if (calendarType === 'lunar') {
+    return `农历 ${pad(month)} 月 ${pad(day)} 日`;
+  }
+
   return `${pad(month)} 月 ${pad(day)} 日`;
 }
 
@@ -111,6 +123,8 @@ function getEventTypeLabel(event: Pick<MemorialEvent, 'type' | 'label'>) {
       return '生日';
     case 'anniversary':
       return '周年';
+    case 'death_anniversary':
+      return '忌日';
     default:
       return event.label || '自定义';
   }
@@ -148,7 +162,7 @@ const MemorialEditPage = observer(() => {
   const [saving, setSaving] = useState(false);
 
   const [editingEventId, setEditingEventId] = useState('');
-  const [eventForm, setEventForm] = useState(DEFAULT_EVENT);
+  const [eventForm, setEventForm] = useState({ ...DEFAULT_EVENT });
   const [selectedTestEventId, setSelectedTestEventId] = useState('');
   const [testDate, setTestDate] = useState(defaultTestMoment.date);
   const [testTime, setTestTime] = useState(defaultTestMoment.time);
@@ -183,6 +197,16 @@ const MemorialEditPage = observer(() => {
   );
   const windowStartIndex = Math.max(WINDOW_VALUES.indexOf(eventForm.windowStartDays), 0);
   const windowEndIndex = Math.max(WINDOW_VALUES.indexOf(eventForm.windowEndDays), 0);
+  const lunarMonthLabels = useMemo(
+    () => LUNAR_MONTH_VALUES.map((value) => `农历 ${pad(value)} 月`),
+    []
+  );
+  const lunarDayLabels = useMemo(
+    () => LUNAR_DAY_VALUES.map((value) => `农历 ${pad(value)} 日`),
+    []
+  );
+  const lunarMonthIndex = Math.max(LUNAR_MONTH_VALUES.indexOf(eventForm.month), 0);
+  const lunarDayIndex = Math.max(LUNAR_DAY_VALUES.indexOf(eventForm.day), 0);
   const activeWindowPreset = WINDOW_PRESETS.find(
     (preset) =>
       preset.start === eventForm.windowStartDays && preset.end === eventForm.windowEndDays
@@ -206,7 +230,7 @@ const MemorialEditPage = observer(() => {
 
   const resetEventForm = () => {
     setEditingEventId('');
-    setEventForm(DEFAULT_EVENT);
+    setEventForm({ ...DEFAULT_EVENT });
   };
 
   const handleSaveProfile = async () => {
@@ -270,10 +294,12 @@ const MemorialEditPage = observer(() => {
     }
 
     try {
+      const forcedSolar = eventForm.type === 'qingming';
       const payload = {
         type: eventForm.type,
-        month: eventForm.type === 'qingming' ? 4 : Number(eventForm.month),
-        day: eventForm.type === 'qingming' ? 4 : Number(eventForm.day),
+        calendarType: forcedSolar ? 'solar' : eventForm.calendarType,
+        month: forcedSolar ? 4 : Number(eventForm.month),
+        day: forcedSolar ? 4 : Number(eventForm.day),
         label: eventForm.label.trim(),
         windowStartDays: Number(eventForm.windowStartDays),
         windowEndDays: Number(eventForm.windowEndDays),
@@ -302,6 +328,7 @@ const MemorialEditPage = observer(() => {
     setSelectedTestEventId(event.id);
     setEventForm({
       type: event.type,
+      calendarType: event.calendarType || 'solar',
       month: event.month,
       day: event.day,
       label: event.label,
@@ -485,11 +512,11 @@ const MemorialEditPage = observer(() => {
                       {getEventTypeLabel(event)}
                     </Text>
                     <Text className='mt-2 block text-caption text-driftwood'>
-                      {formatMonthDay(event.month, event.day)} · {formatTimeValue(event.deliverAtHour, event.deliverAtMinute)} · {formatWindowRange(event.windowStartDays, event.windowEndDays)}
+                      {formatMonthDay(event.month, event.day, event.calendarType || 'solar')} · {formatTimeValue(event.deliverAtHour, event.deliverAtMinute)} · {formatWindowRange(event.windowStartDays, event.windowEndDays)}
                     </Text>
                     <Text className='mt-2 block text-caption text-fog'>
                       {event.enabled
-                        ? `下一次窗口会从 ${formatDateTime(event.nextTriggerAtMs)} 开始`
+                        ? `${event.calendarType === 'lunar' ? '农历' : '公历'}规则下，下一次窗口会从 ${formatDateTime(event.nextTriggerAtMs)} 开始`
                         : '当前已经停用，不会自动送达'}
                     </Text>
                   </View>
@@ -529,6 +556,7 @@ const MemorialEditPage = observer(() => {
                 setEventForm((prev) => ({
                   ...prev,
                   type: item.type,
+                  calendarType: item.type === 'qingming' ? 'solar' : prev.calendarType,
                   month: item.type === 'qingming' ? 4 : prev.month,
                   day: item.type === 'qingming' ? 4 : prev.day,
                 }))
@@ -542,7 +570,7 @@ const MemorialEditPage = observer(() => {
         <View className='memorial-event-spotlight'>
           <Text className='memorial-event-spotlight-kicker'>当前设定</Text>
           <Text className='memorial-event-spotlight-title'>
-            {formatMonthDay(eventForm.month, eventForm.day)} · {formatTimeValue(eventForm.deliverAtHour, eventForm.deliverAtMinute)}
+            {formatMonthDay(eventForm.month, eventForm.day, eventForm.calendarType)} · {formatTimeValue(eventForm.deliverAtHour, eventForm.deliverAtMinute)}
           </Text>
           <Text className='memorial-event-spotlight-copy'>
             {getEventTypeLabel({ type: eventForm.type, label: eventForm.label })} · {formatWindowRange(eventForm.windowStartDays, eventForm.windowEndDays)}
@@ -554,31 +582,87 @@ const MemorialEditPage = observer(() => {
             label='日期与标签'
             hint='日期可以直接点选，不需要再手填月份和日期。如果是自定义纪念日，也可以补一个名字。'
           >
+            <View className='mb-4 flex flex-wrap gap-2'>
+              {CALENDAR_TYPES.map((item) => (
+                <ArcoTag
+                  key={item.value}
+                  active={eventForm.calendarType === item.value}
+                  onClick={() =>
+                    setEventForm((prev) => ({
+                      ...prev,
+                      calendarType: prev.type === 'qingming' ? 'solar' : item.value,
+                    }))
+                  }
+                >
+                  {item.label}
+                </ArcoTag>
+              ))}
+            </View>
             <View className='field-row field-row--double'>
-              <Picker
-                mode='date'
-                end={`${getCurrentYear()}-12-31`}
-                fields='day'
-                start={`${getCurrentYear()}-01-01`}
-                value={buildDatePickerValue(eventForm.month, eventForm.day)}
-                disabled={eventForm.type === 'qingming'}
-                onChange={(event) => {
-                  const next = parseDatePickerValue(event.detail.value);
-                  setEventForm((prev) => ({
-                    ...prev,
-                    month: next.month,
-                    day: next.day,
-                  }));
-                }}
-              >
-                <View className={`picker-field ${eventForm.type === 'qingming' ? 'picker-field--disabled' : ''}`}>
-                  <Text className='picker-field-label'>日期</Text>
-                  <Text className='picker-field-value'>{formatMonthDay(eventForm.month, eventForm.day)}</Text>
-                  <Text className='picker-field-note'>
-                    {eventForm.type === 'qingming' ? '清明默认固定日期' : '点这里重新选择'}
-                  </Text>
+              {eventForm.calendarType === 'solar' ? (
+                <Picker
+                  mode='date'
+                  end={`${getCurrentYear()}-12-31`}
+                  fields='day'
+                  start={`${getCurrentYear()}-01-01`}
+                  value={buildDatePickerValue(eventForm.month, eventForm.day)}
+                  disabled={eventForm.type === 'qingming'}
+                  onChange={(event) => {
+                    const next = parseDatePickerValue(event.detail.value);
+                    setEventForm((prev) => ({
+                      ...prev,
+                      month: next.month,
+                      day: next.day,
+                    }));
+                  }}
+                >
+                  <View className={`picker-field ${eventForm.type === 'qingming' ? 'picker-field--disabled' : ''}`}>
+                    <Text className='picker-field-label'>日期</Text>
+                    <Text className='picker-field-value'>{formatMonthDay(eventForm.month, eventForm.day, eventForm.calendarType)}</Text>
+                    <Text className='picker-field-note'>
+                      {eventForm.type === 'qingming' ? '清明默认固定日期' : '点这里重新选择'}
+                    </Text>
+                  </View>
+                </Picker>
+              ) : (
+                <View className='flex flex-1 flex-col gap-3'>
+                  <Picker
+                    mode='selector'
+                    range={lunarMonthLabels}
+                    value={lunarMonthIndex}
+                    onChange={(event) =>
+                      setEventForm((prev) => ({
+                        ...prev,
+                        month: LUNAR_MONTH_VALUES[Number(event.detail.value)] ?? prev.month,
+                      }))
+                    }
+                  >
+                    <View className='picker-field'>
+                      <Text className='picker-field-label'>农历月份</Text>
+                      <Text className='picker-field-value'>{`农历 ${pad(eventForm.month)} 月`}</Text>
+                      <Text className='picker-field-note'>点这里调整农历月份</Text>
+                    </View>
+                  </Picker>
+
+                  <Picker
+                    mode='selector'
+                    range={lunarDayLabels}
+                    value={lunarDayIndex}
+                    onChange={(event) =>
+                      setEventForm((prev) => ({
+                        ...prev,
+                        day: LUNAR_DAY_VALUES[Number(event.detail.value)] ?? prev.day,
+                      }))
+                    }
+                  >
+                    <View className='picker-field'>
+                      <Text className='picker-field-label'>农历日期</Text>
+                      <Text className='picker-field-value'>{`农历 ${pad(eventForm.day)} 日`}</Text>
+                      <Text className='picker-field-note'>点这里调整农历日期</Text>
+                    </View>
+                  </Picker>
                 </View>
-              </Picker>
+              )}
 
               <View className='picker-field picker-field--static'>
                 <Text className='picker-field-label'>纪念日名字</Text>
@@ -741,7 +825,7 @@ const MemorialEditPage = observer(() => {
               <View className='memorial-test-summary'>
                 <Text className='memorial-test-summary-title'>当前测试对象</Text>
                 <Text className='memorial-test-summary-copy'>
-                  {getEventTypeLabel(selectedTestEvent)} · 常规规则是 {formatMonthDay(selectedTestEvent.month, selectedTestEvent.day)} {formatTimeValue(selectedTestEvent.deliverAtHour, selectedTestEvent.deliverAtMinute)}
+                  {getEventTypeLabel(selectedTestEvent)} · 常规规则是 {formatMonthDay(selectedTestEvent.month, selectedTestEvent.day, selectedTestEvent.calendarType || 'solar')} {formatTimeValue(selectedTestEvent.deliverAtHour, selectedTestEvent.deliverAtMinute)}
                 </Text>
               </View>
             ) : null}

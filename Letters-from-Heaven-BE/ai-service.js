@@ -116,6 +116,7 @@ function buildPrompt(letter) {
   const title = normalizeText(letter?.title, 32);
   const body = normalizeText(letter?.body, 1000);
   const signature = normalizeText(letter?.signature, 16);
+  const feedbackHint = normalizeText(letter?.feedbackHint, 400);
 
   return [
     "任务：请基于来信内容，写一封像真人写出来的回信。",
@@ -137,6 +138,7 @@ function buildPrompt(letter) {
     title ? `来信标题：${title}` : "来信标题：（无）",
     `来信正文：${body || "（无）"}`,
     signature ? `署名：${signature}` : "署名：（无）",
+    feedbackHint ? `用户反馈偏好：${feedbackHint}` : "",
   ].join("\n");
 }
 

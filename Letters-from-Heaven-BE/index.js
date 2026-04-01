@@ -13,6 +13,7 @@ const {
   getReplyDetail,
   listLetters,
   listReplies,
+  settleDueReplies,
   touchUser,
   updateReply,
 } = require("./mailbox-service");
@@ -28,6 +29,10 @@ const {
   createMemorialTestReply,
   triggerMemorialReplies,
 } = require("./memorial-service");
+const {
+  getUserPreferences,
+  updateUserPreferences,
+} = require("./preference-service");
 
 const logger = morgan("tiny");
 
@@ -36,6 +41,18 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cors());
 app.use(logger);
+app.use((req, res, next) => {
+  const overrideHeader = req.headers["x-http-method-override"];
+  const override = typeof overrideHeader === "string"
+    ? overrideHeader.trim().toUpperCase()
+    : "";
+
+  if (req.method === "POST" && (override === "PATCH" || override === "DELETE" || override === "PUT")) {
+    req.method = override;
+  }
+
+  next();
+});
 
 function requireUser(req, res, next) {
   const userContext = resolveUserContext(req);
@@ -107,7 +124,7 @@ app.get("/api/me", requireUser, asyncHandler(async (req, res) => {
 }));
 
 app.get("/api/mailbox", requireUser, asyncHandler(async (req, res) => {
-  sendSuccess(res, await getMailbox(req.userContext));
+  sendSuccess(res, await getMailbox(req.userContext, req.query || {}));
 }));
 
 app.delete("/api/mailbox", requireUser, asyncHandler(async (req, res) => {
@@ -123,7 +140,7 @@ app.post("/api/letters", requireUser, asyncHandler(async (req, res) => {
 }));
 
 app.get("/api/replies", requireUser, asyncHandler(async (req, res) => {
-  sendSuccess(res, await listReplies(req.userContext));
+  sendSuccess(res, await listReplies(req.userContext, req.query || {}));
 }));
 
 app.get("/api/replies/:id", requireUser, asyncHandler(async (req, res) => {
@@ -133,9 +150,23 @@ app.get("/api/replies/:id", requireUser, asyncHandler(async (req, res) => {
 app.patch("/api/replies/:id", requireUser, asyncHandler(async (req, res) => {
   sendSuccess(res, await updateReply(req.userContext, req.params.id, req.body));
 }));
+app.post("/api/replies/:id", requireUser, asyncHandler(async (req, res) => {
+  sendSuccess(res, await updateReply(req.userContext, req.params.id, req.body));
+}));
 
 app.delete("/api/replies/:id", requireUser, asyncHandler(async (req, res) => {
   sendSuccess(res, await deleteReply(req.userContext, req.params.id));
+}));
+
+app.get("/api/preferences", requireUser, asyncHandler(async (req, res) => {
+  sendSuccess(res, await getUserPreferences(req.userContext));
+}));
+
+app.patch("/api/preferences", requireUser, asyncHandler(async (req, res) => {
+  sendSuccess(res, await updateUserPreferences(req.userContext, req.body || {}));
+}));
+app.post("/api/preferences", requireUser, asyncHandler(async (req, res) => {
+  sendSuccess(res, await updateUserPreferences(req.userContext, req.body || {}));
 }));
 
 // 纪念档案
@@ -148,6 +179,9 @@ app.post("/api/memorial-profiles", requireUser, asyncHandler(async (req, res) =>
 }));
 
 app.patch("/api/memorial-profiles/:id", requireUser, asyncHandler(async (req, res) => {
+  sendSuccess(res, await updateMemorialProfile(req.userContext, req.params.id, req.body));
+}));
+app.post("/api/memorial-profiles/:id", requireUser, asyncHandler(async (req, res) => {
   sendSuccess(res, await updateMemorialProfile(req.userContext, req.params.id, req.body));
 }));
 
@@ -188,6 +222,9 @@ app.post(
 app.patch("/api/memorial-events/:id", requireUser, asyncHandler(async (req, res) => {
   sendSuccess(res, await updateMemorialEvent(req.userContext, req.params.id, req.body));
 }));
+app.post("/api/memorial-events/:id", requireUser, asyncHandler(async (req, res) => {
+  sendSuccess(res, await updateMemorialEvent(req.userContext, req.params.id, req.body));
+}));
 
 app.delete("/api/memorial-events/:id", requireUser, asyncHandler(async (req, res) => {
   sendSuccess(res, await deleteMemorialEvent(req.userContext, req.params.id));
@@ -196,6 +233,11 @@ app.delete("/api/memorial-events/:id", requireUser, asyncHandler(async (req, res
 // 定时任务触发
 app.post("/api/jobs/memorial/trigger", requireJobToken, asyncHandler(async (req, res) => {
   sendSuccess(res, await triggerMemorialReplies());
+}));
+
+app.post("/api/jobs/replies/settle", requireJobToken, asyncHandler(async (req, res) => {
+  const limit = Number(req.body?.limit || req.query?.limit || 200);
+  sendSuccess(res, await settleDueReplies(Number.isFinite(limit) ? limit : 200));
 }));
 
 // 小程序调用，获取微信 Open ID

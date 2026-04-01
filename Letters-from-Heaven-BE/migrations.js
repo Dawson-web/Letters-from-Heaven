@@ -117,6 +117,131 @@ const MIGRATIONS = [
       );
     },
   },
+  {
+    id: "20260331_reply_controls_preferences_and_lunar_events",
+    async up(sequelize) {
+      await addColumnIfMissing(
+        sequelize,
+        "replies",
+        "readAtMs",
+        "BIGINT NULL"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "replies",
+        "favorite",
+        "TINYINT(1) NOT NULL DEFAULT 0"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "replies",
+        "archived",
+        "TINYINT(1) NOT NULL DEFAULT 0"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "replies",
+        "feedbackScore",
+        "VARCHAR(16) NULL"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "replies",
+        "feedbackReason",
+        "VARCHAR(255) NULL"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "replies",
+        "feedbackAtMs",
+        "BIGINT NULL"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "replies",
+        "notifiedAtMs",
+        "BIGINT NULL"
+      );
+
+      await createIndexIfMissing(sequelize, "replies", "idx_replies_archived", [
+        "archived",
+      ]);
+      await createIndexIfMissing(sequelize, "replies", "idx_replies_favorite", [
+        "favorite",
+      ]);
+      await createIndexIfMissing(sequelize, "replies", "idx_replies_read_at", [
+        "readAtMs",
+      ]);
+
+      await addColumnIfMissing(
+        sequelize,
+        "users",
+        "deliveryPace",
+        "VARCHAR(16) NOT NULL DEFAULT 'balanced'"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "users",
+        "quietStartMinute",
+        "INT NULL"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "users",
+        "quietEndMinute",
+        "INT NULL"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "users",
+        "reminderEnabled",
+        "TINYINT(1) NOT NULL DEFAULT 0"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "users",
+        "reminderChannel",
+        "VARCHAR(32) NOT NULL DEFAULT 'none'"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "users",
+        "officialAccountOpenId",
+        "VARCHAR(128) NOT NULL DEFAULT ''"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "users",
+        "miniProgramTemplateId",
+        "VARCHAR(128) NOT NULL DEFAULT ''"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "users",
+        "officialAccountTemplateId",
+        "VARCHAR(128) NOT NULL DEFAULT ''"
+      );
+      await addColumnIfMissing(
+        sequelize,
+        "users",
+        "notifyLanguage",
+        "VARCHAR(8) NOT NULL DEFAULT 'zh_CN'"
+      );
+
+      await addColumnIfMissing(
+        sequelize,
+        "memorial_events",
+        "calendarType",
+        "VARCHAR(16) NOT NULL DEFAULT 'solar'"
+      );
+      await createIndexIfMissing(
+        sequelize,
+        "memorial_events",
+        "idx_memorial_events_calendar",
+        ["calendarType"]
+      );
+    },
+  },
 ];
 
 async function ensureMigrationsTable(sequelize) {

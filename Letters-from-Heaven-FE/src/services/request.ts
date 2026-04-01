@@ -125,14 +125,22 @@ async function requestByCloud<TResponse, TData>(options: RequestOptions<TData>) 
     return null
   }
 
+  const method = options.method || 'GET'
+  const cloudMethod: RequestMethod = method === 'PATCH' ? 'POST' : method
+  const cloudHeader = buildHeaders(options.header)
+
+  if (method === 'PATCH') {
+    cloudHeader['x-http-method-override'] = 'PATCH'
+  }
+
   const result = await cloud.callContainer<TResponse>({
     config: {
       env: CLOUD_ENV,
     },
     path: options.path,
-    method: options.method || 'GET',
+    method: cloudMethod,
     header: {
-      ...buildHeaders(options.header),
+      ...cloudHeader,
       'X-WX-SERVICE': CLOUD_SERVICE,
     },
     data: options.data,
@@ -148,11 +156,19 @@ async function requestByHttp<TResponse, TData>(options: RequestOptions<TData>) {
     )
   }
 
+  const method = options.method || 'GET'
+  const httpMethod: RequestMethod = method === 'PATCH' ? 'POST' : method
+  const httpHeader = buildHeaders(options.header)
+
+  if (method === 'PATCH') {
+    httpHeader['x-http-method-override'] = 'PATCH'
+  }
+
   const response = await Taro.request<ApiEnvelope<TResponse>>({
     url: joinUrl(API_BASE_URL, options.path),
-    method: options.method || 'GET',
+    method: httpMethod,
     data: options.data,
-    header: buildHeaders(options.header),
+    header: httpHeader,
   })
 
   return response.data

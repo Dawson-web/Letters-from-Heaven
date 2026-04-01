@@ -15,6 +15,7 @@ import type {
   LetterDraft,
   LetterRecord,
   PersistedMailboxState,
+  ReplyFeedbackScore,
   ReplyRecord,
   SendLetterOptions,
 } from '@/types/mail'
@@ -126,7 +127,7 @@ export class MailboxStore {
     )
   }
 
-  async refreshReplies() {
+  async refreshReplies(includeArchived = false) {
     if (!this.hydrated || this.syncing) {
       return
     }
@@ -134,7 +135,7 @@ export class MailboxStore {
     this.syncing = true
 
     try {
-      const mailbox = await fetchMailbox()
+      const mailbox = await fetchMailbox({ includeArchived })
 
       runInAction(() => {
         this.replaceRemoteState(mailbox)
@@ -240,6 +241,63 @@ export class MailboxStore {
 
   async updateReplySubject(id: string, subject: string) {
     const reply = await updateReplyRequest(id, { subject })
+
+    runInAction(() => {
+      this.upsertReply(reply)
+      this.lastError = ''
+      this.persist()
+    })
+
+    return reply
+  }
+
+  async markReplyRead(id: string, read = true) {
+    const reply = await updateReplyRequest(id, {
+      readAt: read ? Date.now() : null,
+    })
+
+    runInAction(() => {
+      this.upsertReply(reply)
+      this.lastError = ''
+      this.persist()
+    })
+
+    return reply
+  }
+
+  async toggleReplyFavorite(id: string, favorite?: boolean) {
+    const current = this.getReply(id)
+    const target = favorite ?? !Boolean(current?.favorite)
+    const reply = await updateReplyRequest(id, { favorite: target })
+
+    runInAction(() => {
+      this.upsertReply(reply)
+      this.lastError = ''
+      this.persist()
+    })
+
+    return reply
+  }
+
+  async toggleReplyArchived(id: string, archived?: boolean) {
+    const current = this.getReply(id)
+    const target = archived ?? !Boolean(current?.archived)
+    const reply = await updateReplyRequest(id, { archived: target })
+
+    runInAction(() => {
+      this.upsertReply(reply)
+      this.lastError = ''
+      this.persist()
+    })
+
+    return reply
+  }
+
+  async updateReplyFeedback(id: string, score: ReplyFeedbackScore | null, reason = '') {
+    const reply = await updateReplyRequest(id, {
+      feedbackScore: score,
+      feedbackReason: reason,
+    })
 
     runInAction(() => {
       this.upsertReply(reply)
