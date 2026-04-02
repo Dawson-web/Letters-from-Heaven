@@ -27,6 +27,11 @@ function normalizeText(input, maxLength) {
   return value.slice(0, maxLength);
 }
 
+function normalizeInlineText(input, maxLength) {
+  const value = typeof input === "string" ? input.replace(/\s+/g, " ").trim() : "";
+  return value.slice(0, maxLength);
+}
+
 function withTimeout(promise, timeoutMs) {
   return Promise.race([
     promise,
@@ -132,13 +137,40 @@ function buildPrompt(letter) {
     "5. 情绪基调以接住对方为主：真诚、克制、有分寸；不训诫、不施压、不制造内疚。",
     "6. 不要声称超自然能力，不要提供医学、法律、投资等专业建议。",
     "7. 只输出回信正文，不要标题，不要署名解释，不要 markdown，不要列表。",
-    "8. 字数控制在 180-320 个中文字符。",
+    "8. 字数控制在 180-600 个中文字符。",
     "",
     `关系：${relation}`,
     title ? `来信标题：${title}` : "来信标题：（无）",
     `来信正文：${body || "（无）"}`,
     signature ? `署名：${signature}` : "署名：（无）",
     feedbackHint ? `用户反馈偏好：${feedbackHint}` : "",
+  ].join("\n");
+}
+
+function buildFeaturedLetterReviewPrompt(letter) {
+  const relation = normalizeText(letter?.relation, 16) || "远方";
+  const title = normalizeText(letter?.title, 32);
+  const body = normalizeText(letter?.body, 1000);
+  const excerpt = normalizeInlineText(letter?.excerpt, 160);
+
+  return [
+    "任务：审核一封匿名书信，判断它是否适合进入首页“今日共鸣”的公开展示候选。",
+    "拒绝标准：",
+    "1. 内容太少、太空、太像测试文本，或主要是寒暄、流水账、事务通知。",
+    "2. 含有不适合公开首页展示的内容，例如露骨色情、仇恨辱骂、广告引流、联系方式、自伤引导、过于血腥暴力或违法信息。",
+    "3. 即使匿名后，仍然明显带有隐私、账号、联系方式或强识别性细节。",
+    "通过标准：",
+    "1. 有真实情绪或具体生活感，能给读者陪伴感。",
+    "2. 适合首页公开展示，语气克制，不会让人明显不适。",
+    "3. 如果通过，请给出一段适合首页展示的节选，长度控制在 45-110 个中文字符。",
+    "输出要求：只输出一行 JSON，不要解释，不要 markdown。",
+    'JSON 格式：{"approved":true,"reason":"...","excerpt":"..."}',
+    '或：{"approved":false,"reason":"...","excerpt":""}',
+    "",
+    `关系：${relation}`,
+    title ? `来信标题：${title}` : "来信标题：（无）",
+    excerpt ? `当前节选：${excerpt}` : "当前节选：（无）",
+    `来信正文：${body || "（无）"}`,
   ].join("\n");
 }
 
@@ -154,7 +186,7 @@ function normalizeAIResponse(text) {
   return content.slice(0, 1800);
 }
 
-async function generateReplyBodyByAI(letter) {
+async function requestTextFromAI({ systemContent, userContent }) {
   const client = getClient();
   if (!client) {
     return "";
@@ -169,12 +201,11 @@ async function generateReplyBodyByAI(letter) {
       messages: [
         {
           role: "system",
-          content:
-            "你是一位中文私人书信代笔者。先读懂来信真实情感，再按来信语气推断回信人的性格，用回信人第一人称写回信。文字必须像真人写信，禁止AI腔、模板腔和分析旁白，只输出正文。",
+          content: systemContent,
         },
         {
           role: "user",
-          content: buildPrompt(letter),
+          content: userContent,
         },
       ],
     };
@@ -194,11 +225,61 @@ async function generateReplyBodyByAI(letter) {
 
     return normalizeAIResponse(output);
   } catch (error) {
-    console.error("[ai-service] generateReplyBodyByAI failed:", error.message || error);
+    console.error("[ai-service] requestTextFromAI failed:", error.message || error);
     return "";
+  }
+}
+
+async function generateReplyBodyByAI(letter) {
+  return requestTextFromAI({
+    systemContent:
+      "你是一位中文私人书信代笔者。先读懂来信真实情感，再按来信语气推断回信人的性格，用回信人第一人称写回信。文字必须像真人写信，禁止AI腔、模板腔和分析旁白，只输出正文。",
+    userContent: buildPrompt(letter),
+  });
+}
+
+function extractJSONObject(text) {
+  const raw = String(text || "").trim();
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+
+  if (start < 0 || end <= start) {
+    return "";
+  }
+
+  return raw.slice(start, end + 1);
+}
+
+async function reviewFeaturedLetterByAI(letter) {
+  const raw = await requestTextFromAI({
+    systemContent:
+      "你是一名中文内容审核与编辑助手。你只负责判断这封匿名书信是否适合进入首页公开展示候选，并在适合时给出更稳妥的匿名节选。只能输出 JSON。",
+    userContent: buildFeaturedLetterReviewPrompt(letter),
+  });
+
+  if (!raw) {
+    return null;
+  }
+
+  const jsonText = extractJSONObject(raw);
+  if (!jsonText) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(jsonText);
+    return {
+      approved: parsed?.approved === true,
+      reason: normalizeText(parsed?.reason, 120),
+      excerpt: normalizeInlineText(parsed?.excerpt, 255),
+    };
+  } catch (error) {
+    console.error("[ai-service] reviewFeaturedLetterByAI parse failed:", error.message || error);
+    return null;
   }
 }
 
 module.exports = {
   generateReplyBodyByAI,
+  reviewFeaturedLetterByAI,
 };

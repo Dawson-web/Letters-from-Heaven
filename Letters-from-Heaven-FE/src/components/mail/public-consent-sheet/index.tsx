@@ -22,10 +22,10 @@ export function PublicConsentSheet({ onConfirm, onClose }: PublicConsentSheetPro
         <Text className='boundary-confirm-eyebrow'>寄出之前</Text>
         <Text className='boundary-confirm-title'>愿意让这封信，匿名陪陪别人吗</Text>
         <Text className='boundary-confirm-copy'>
-          如果你愿意，我们可能会节选其中一段，以匿名方式收录到首页的“今日共鸣”，给同样正在想念的人一点陪伴。
+          如果你愿意，我们会先对内容做匿名化和筛选；合适的来信，才会节选其中一段收录到首页的“今日共鸣”，给同样正在想念的人一点陪伴。
         </Text>
         <Text className='boundary-confirm-note'>
-          展示时不会显示你的署名。你也可以选择暂不收录，这封信仍会照常寄出。
+          展示时不会显示你的署名。内容过少、含隐私或不适合公开展示的来信，会被自动筛掉；你也可以选择暂不收录，这封信仍会照常寄出。
         </Text>
 
         <View className='public-consent-sheet-actions'>

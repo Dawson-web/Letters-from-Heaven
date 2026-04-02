@@ -18,13 +18,32 @@ const {
   buildReadyReplyPayload,
   buildMemorialReadyPayload,
 } = require("./reply-builder");
-const { generateReplyBodyByAI } = require("./ai-service");
+const {
+  generateReplyBodyByAI,
+  reviewFeaturedLetterByAI,
+} = require("./ai-service");
 const { notifyReplyReady } = require("./notification-service");
 
 const AI_READY_PREVIEW = "你的来信已收到，回响已生成。";
 const FEATURE_TIME_ZONE = "Asia/Shanghai";
 const REDACTED_CONTACT = "[联系方式已隐去]";
 const REDACTED_NUMBER = "[数字已隐去]";
+const FEATURE_MIN_BODY_CHARS = 36;
+const FEATURE_MIN_EXCERPT_CHARS = 24;
+const FEATURE_REJECT_PATTERNS = [
+  {
+    reason: "contains_contact_or_solicitation",
+    pattern: /(?:加我微信|vx[:：]?|v信|QQ群|qq群|扫码|下单|返利|微商|推广|引流|私聊我|联系我)/i,
+  },
+  {
+    reason: "contains_explicit_sexual_content",
+    pattern: /(?:约炮|嫖娼|裸聊|性交易|春药|黄片|AV片|做爱|口交|肛交|强奸|开房)/i,
+  },
+  {
+    reason: "contains_gore_or_violent_threat",
+    pattern: /(?:碎尸|爆头|砍死|捅死|灭门|炸死|血肉模糊)/i,
+  },
+];
 
 function createId(prefix) {
   const random = Math.random().toString(36).slice(2, 8);
@@ -95,7 +114,15 @@ function createPublicExcerpt(body) {
     excerpt = redacted.slice(0, 120);
   }
 
-  excerpt = excerpt.replace(/[“”"]/g, "").trim();
+  return finalizePublicExcerpt(excerpt);
+}
+
+function finalizePublicExcerpt(input) {
+  let excerpt = normalizeInlineText(input, 255).replace(/[“”"]/g, "").trim();
+  if (!excerpt) {
+    return "";
+  }
+
   if (excerpt.length > 120) {
     excerpt = `${excerpt.slice(0, 118).trim()}…`;
   } else if (!/[。！？!?…]$/.test(excerpt)) {
@@ -103,6 +130,121 @@ function createPublicExcerpt(body) {
   }
 
   return normalizeInlineText(excerpt, 255);
+}
+
+function countMeaningfulChars(input) {
+  const value = normalizeInlineText(input, 1200);
+  if (!value) {
+    return 0;
+  }
+
+  return value.replace(/[，。！？!?、；：“”"'（）()\[\]【】《》…\-\s]/g, "").length;
+}
+
+function evaluateFeaturedLetterLocally(input, excerpt) {
+  const body = normalizeInlineText(input?.body, 1200);
+  const normalizedExcerpt = normalizeInlineText(excerpt, 255);
+
+  if (!normalizedExcerpt) {
+    return {
+      approved: false,
+      reason: "missing_excerpt",
+    };
+  }
+
+  if (countMeaningfulChars(body) < FEATURE_MIN_BODY_CHARS) {
+    return {
+      approved: false,
+      reason: "body_too_short",
+    };
+  }
+
+  if (countMeaningfulChars(normalizedExcerpt) < FEATURE_MIN_EXCERPT_CHARS) {
+    return {
+      approved: false,
+      reason: "excerpt_too_short",
+    };
+  }
+
+  if (
+    normalizedExcerpt.includes(REDACTED_CONTACT) ||
+    normalizedExcerpt.includes(REDACTED_NUMBER) ||
+    normalizedExcerpt.includes("[链接已隐去]") ||
+    normalizedExcerpt.includes("微信已隐去")
+  ) {
+    return {
+      approved: false,
+      reason: "privacy_heavy_excerpt",
+    };
+  }
+
+  const riskyText = `${body}\n${normalizedExcerpt}`;
+  const matched = FEATURE_REJECT_PATTERNS.find((rule) => rule.pattern.test(riskyText));
+  if (matched) {
+    return {
+      approved: false,
+      reason: matched.reason,
+    };
+  }
+
+  return {
+    approved: true,
+    reason: "local_approved",
+  };
+}
+
+async function buildPublicFeaturedDecision(input) {
+  if (!input?.publicConsent) {
+    return {
+      approved: false,
+      reason: "no_public_consent",
+      excerpt: "",
+    };
+  }
+
+  const rawExcerpt = createPublicExcerpt(input.body);
+  const localReview = evaluateFeaturedLetterLocally(input, rawExcerpt);
+  if (!localReview.approved) {
+    return {
+      approved: false,
+      reason: localReview.reason,
+      excerpt: "",
+    };
+  }
+
+  const aiReview = await reviewFeaturedLetterByAI({
+    relation: input.relation,
+    title: input.title,
+    body: input.body,
+    excerpt: rawExcerpt,
+  });
+
+  if (!aiReview) {
+    return {
+      approved: true,
+      reason: "fallback_local_only",
+      excerpt: rawExcerpt,
+    };
+  }
+
+  if (!aiReview.approved) {
+    return {
+      approved: false,
+      reason: aiReview.reason || "ai_rejected",
+      excerpt: "",
+    };
+  }
+
+  const reviewedExcerpt = finalizePublicExcerpt(redactPublicText(aiReview.excerpt || rawExcerpt));
+  const finalExcerpt = countMeaningfulChars(reviewedExcerpt) >= FEATURE_MIN_EXCERPT_CHARS
+    ? reviewedExcerpt
+    : rawExcerpt;
+
+  return {
+    approved: true,
+    reason: aiReview.reason || "ai_approved",
+    excerpt: finalExcerpt,
+  };
 }
 
 function buildPublicHeadline(relation) {
@@ -512,7 +654,6 @@ async function createLetter(userContext, payload) {
   const now = Date.now();
   const letterId = createId("letter");
   const replyId = createId("reply");
-  const publicExcerpt = input.publicConsent ? createPublicExcerpt(input.body) : "";
 
   const user = await touchUser(userContext);
   const replyPayload = buildWaitingReplyPayload(input, now, {
@@ -523,10 +664,21 @@ async function createLetter(userContext, payload) {
   });
 
   const feedbackHint = await getRecentFeedbackHint(userContext.userId);
-  const aiBodySeed = await generateReplyBodyByAI({
-    ...input,
-    feedbackHint,
-  });
+  const [featureDecision, aiBodySeed] = await Promise.all([
+    buildPublicFeaturedDecision(input),
+    generateReplyBodyByAI({
+      ...input,
+      feedbackHint,
+    }),
+  ]);
+
+  const publicExcerpt = featureDecision.approved ? featureDecision.excerpt : "";
+  if (input.publicConsent && !featureDecision.approved) {
+    console.info("[featured-letter] skipped candidate", {
+      letterId,
+      reason: featureDecision.reason,
+    });
+  }
 
   const result = await sequelize.transaction(async (transaction) => {
     const letter = await Letter.create(
@@ -596,7 +748,15 @@ async function getFeaturedLetter() {
     order: [["createdAtMs", "DESC"]],
   });
 
-  const featured = pickFeaturedLetter(candidates, pickedOn);
+  const eligibleCandidates = candidates.filter((letter) =>
+    evaluateFeaturedLetterLocally(
+      {
+        body: letter.body,
+      },
+      letter.publicExcerpt
+    ).approved
+  );
+  const featured = pickFeaturedLetter(eligibleCandidates, pickedOn);
 
   return {
     featuredLetter: serializeFeaturedLetter(featured),
