@@ -212,6 +212,7 @@ const InboxPage = observer(() => {
 
   return (
     <PageShell
+      stabilizeTransitions
       eyebrow='等待打开的那一刻'
       title='收件箱'
       subtitle='这里收着已经到来的，也收着还在路上的回应。'

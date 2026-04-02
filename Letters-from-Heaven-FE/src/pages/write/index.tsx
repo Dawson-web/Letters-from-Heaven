@@ -96,6 +96,7 @@ const WritePage = observer(() => {
   if (!mailboxStore.boundaryAccepted) {
     return (
       <PageShell
+        stabilizeTransitions
         eyebrow='写给想念的人'
         title='写信'
         subtitle='写下之前，先确认一下这座信箱能陪你做到什么。'
@@ -247,6 +248,7 @@ const WritePage = observer(() => {
 
   return (
     <PageShell
+      stabilizeTransitions
       eyebrow='写给想念的人'
       title='写一封信'
       subtitle='不需要完整，也不用着急，把最先浮上来的那句话放在这里就好。'

@@ -15,6 +15,7 @@ interface PageShellProps {
   className?: string;
   headerClassName?: string;
   contentClassName?: string;
+  stabilizeTransitions?: boolean;
 }
 
 export function PageShell({
@@ -28,14 +29,26 @@ export function PageShell({
   className,
   headerClassName,
   contentClassName,
+  stabilizeTransitions = false,
 }: PageShellProps) {
   return (
-    <View className={cn('page-shell', className)}>
-      <View className={cn('page-shell-header anim-fade-in-up', headerClassName)}>
+    <View className={cn('page-shell', stabilizeTransitions && 'page-shell--stable', className)}>
+      <View
+        className={cn(
+          'page-shell-header',
+          !stabilizeTransitions && 'anim-fade-in-up',
+          headerClassName,
+        )}
+      >
         {eyebrow ? <Text className='page-shell-eyebrow'>{eyebrow}</Text> : null}
         <Text className='page-shell-title'>{title}</Text>
         {subtitle ? (
-          <Text className='page-shell-subtitle anim-fade-in anim-delay-2'>
+          <Text
+            className={cn(
+              'page-shell-subtitle',
+              !stabilizeTransitions && 'anim-fade-in anim-delay-2',
+            )}
+          >
             {subtitle}
           </Text>
         ) : null}

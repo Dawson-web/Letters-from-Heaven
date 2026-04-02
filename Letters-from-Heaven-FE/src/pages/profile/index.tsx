@@ -65,17 +65,21 @@ const ProfilePage = observer(() => {
   const { mailboxStore } = useRootStore();
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [loadingPreferences, setLoadingPreferences] = useState(false);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [savingPreferences, setSavingPreferences] = useState(false);
 
   useDidShow(() => {
     void (async () => {
-      setLoadingPreferences(true);
+      if (!preferencesLoaded) {
+        setLoadingPreferences(true);
+      }
       try {
         const latest = await fetchPreferences();
         setPreferences({ ...DEFAULT_PREFERENCES, ...latest });
       } catch (error) {
         Taro.showToast({ title: getErrorMessage(error), icon: 'none' });
       } finally {
+        setPreferencesLoaded(true);
         setLoadingPreferences(false);
       }
     })();
@@ -138,6 +142,7 @@ const ProfilePage = observer(() => {
 
   return (
     <PageShell
+      stabilizeTransitions
       eyebrow='信箱管理'
       title='我的'
       subtitle='这里放着这只信箱的近况、边界提醒，以及几项需要你亲自决定的整理操作。'
@@ -162,7 +167,7 @@ const ProfilePage = observer(() => {
           description='支持快速/均衡/慢速节奏；也可以限制夜间静默，并选择小程序或公众号提醒。'
         />
 
-        {loadingPreferences ? (
+        {!preferencesLoaded && loadingPreferences ? (
           <Text className='mt-5 block text-caption text-driftwood'>正在加载偏好设置…</Text>
         ) : (
           <View className='mt-5 flex flex-col gap-6'>

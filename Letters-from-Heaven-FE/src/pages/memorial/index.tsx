@@ -17,6 +17,7 @@ const MemorialPage = observer(() => {
 
   return (
     <PageShell
+      stabilizeTransitions
       eyebrow='纪念档案'
       title='把重要的人，安放进清楚又温柔的记忆里'
       subtitle='档案不是为了把回忆整理得完整，而是让后来每一次回响，都更靠近你真正记得的样子。'

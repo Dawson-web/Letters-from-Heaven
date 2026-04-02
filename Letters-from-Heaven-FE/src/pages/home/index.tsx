@@ -23,6 +23,7 @@ const HomePage = observer(() => {
   const [loadingFeatured, setLoadingFeatured] = useState(true);
   const [featuredError, setFeaturedError] = useState('');
   const featuredExcerpt = featuredLetter?.excerpt.replace(/\s+/g, ' ').trim() || '';
+  const showFeaturedSkeleton = loadingFeatured && !featuredLetter && !featuredError;
 
   const refreshFeaturedLetter = async () => {
     setLoadingFeatured(true);
@@ -48,6 +49,7 @@ const HomePage = observer(() => {
 
   return (
     <PageShell
+      stabilizeTransitions
       className='home-page-shell'
       headerClassName='home-page-header'
       title='云端回信'
@@ -104,7 +106,7 @@ const HomePage = observer(() => {
       ) : null}
 
       <ArcoCard tone='emphasis' padding='lg' delay={2} className='daily-letter-card'>
-        {loadingFeatured ? (
+        {showFeaturedSkeleton ? (
           <LoadingState
             text='正在挑选今天想读到的一封信…'
             className='daily-letter-loading'
